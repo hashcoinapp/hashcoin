@@ -1,0 +1,363 @@
+import { describe, expect, it } from "vitest";
+import {
+  DAY_MS, DEFAULT_RULES, HOUR_MS, advanceClock, applyBalanceChange, bonusMiningUsd, chestShares, clockSpeed, clockStartTokens,
+  computeHolderLevel, computeMinerLevel, creditedHours, holdClockMs, hourCredit, isInternalTransfer, linkWallet, unlinkWallet, holderProgress, levelPriceUsd, runEpoch,
+  runHolderPayout, settle, splitTax, splitTokens, devShareAt, minerMaxShareAt, targetTaxRate, type WalletState, type WeightInput,
+} from "../src/index.js";
+
+const price = { priceUsd: 0.001, decimals: 6 }; // $0.001 per token
+const tokensFor = (usd: number) => BigInt(Math.round((usd / price.priceUsd) * 1e6));
+const T0 = Date.UTC(2026, 9, 1);
+const R = DEFAULT_RULES;
+const EMPTY: WalletState = { address: "w", balance: 0n, clockMs: null, clockAt: T0 };
+
+function wallet(usd: number, clockHours: number, address = "w"): WalletState {
+  return { address, balance: tokensFor(usd), clockMs: usd > 0 ? clockHours * HOUR_MS : null, clockAt: T0 };
+}
+
+describe("holder levels", () => {
+  it("H1 at $50 with no clock, H2 at $500 + 24h, H3 at $2,500 + 7 days", () => {
+    expect(computeHolderLevel(wallet(49, 999), price, T0, R)).toBe(0);
+    expect(computeHolderLevel(wallet(50, 0), price, T0, R)).toBe(1);
+    expect(computeHolderLevel(wallet(500, 23.9), price, T0, R)).toBe(1);
+    expect(computeHolderLevel(wallet(500, 24), price, T0, R)).toBe(2);
+    expect(computeHolderLevel(wallet(2500, 167), price, T0, R)).toBe(2);
+    expect(computeHolderLevel(wallet(2500, 168), price, T0, R)).toBe(3);
+  });
+
+  it("a dip drops the level and recovering restores it with no new wait", () => {
+    const w = wallet(600, 48);
+    expect(computeHolderLevel(w, { ...price, priceUsd: 0.0007 }, T0, R)).toBe(1);
+    expect(computeHolderLevel(w, price, T0, R)).toBe(2);
+  });
+
+  it("a bigger bag ticks faster: 1x up to $2,500, 2x at $5,000, at most 3x", () => {
+    expect(clockSpeed(tokensFor(500), price, R)).toBe(1);
+    expect(clockSpeed(tokensFor(2500), price, R)).toBe(1);
+    expect(clockSpeed(tokensFor(5000), price, R)).toBeCloseTo(2);
+    expect(clockSpeed(tokensFor(50000), price, R)).toBe(3);
+    // $5,000 reaches H3's 7-day clock in 3.5 days, $7,500+ in about 2.3
+    expect(computeHolderLevel(wallet(5000, 0), price, T0 + 3.5 * DAY_MS, R)).toBe(3);
+    expect(computeHolderLevel(wallet(7500, 0), price, T0 + 2.3 * DAY_MS, R)).toBe(2);
+    expect(computeHolderLevel(wallet(7500, 0), price, T0 + 2.34 * DAY_MS, R)).toBe(3);
+  });
+
+  it("buying more speeds the clock up from then on, never with a jump", () => {
+    let w = applyBalanceChange(EMPTY, tokensFor(2500), T0, price, R);
+    expect(holdClockMs(w, T0 + DAY_MS, price, R)).toBe(DAY_MS);
+    w = applyBalanceChange(w, tokensFor(2500), T0 + DAY_MS, price, R); // now $5,000
+    expect(w.clockMs).toBe(DAY_MS);
+    expect(holdClockMs(w, T0 + 2 * DAY_MS, price, R)).toBeCloseTo(3 * DAY_MS);
+  });
+
+  it("selling takes 2.5x its share of the clock: 20% sold loses half, 40%+ resets", () => {
+    const sell = (fraction: number) => {
+      const w = wallet(4000, 100);
+      return applyBalanceChange(w, -tokensFor(4000 * fraction), T0, price, R).clockMs;
+    };
+    expect(sell(0.05)).toBeCloseTo(87.5 * HOUR_MS);
+    expect(sell(0.2)).toBeCloseTo(50 * HOUR_MS);
+    expect(sell(0.4)).toBe(0);
+    expect(sell(1)).toBeNull();
+  });
+
+  it("H3 for two weeks, sell 30%: back to H2 until the clock climbs past 7 days again", () => {
+    let w = wallet(2500, 21 * 24); // H3 reached on day 7, held two more weeks
+    expect(computeHolderLevel(w, price, T0, R)).toBe(3);
+    w = applyBalanceChange(w, -tokensFor(750), T0, price, R); // sell 30% (bag now $1,750)
+    expect(holdClockMs(w, T0, price, R)).toBeCloseTo(5.25 * DAY_MS); // lost 75%
+    expect(computeHolderLevel(w, price, T0, R)).toBe(2);
+    w = applyBalanceChange(w, tokensFor(1750), T0, price, R); // buy back to $3,500: bag is H3-sized
+    expect(computeHolderLevel(w, price, T0, R)).toBe(2); // ...but the clock still needs 1.75 days
+    expect(holderProgress(w, price, T0, R).msToNextHolder).toBeCloseTo((1.75 * DAY_MS) / 1.4); // at 1.4x
+  });
+
+  it("the clock only starts once the bag reaches the H1 size, so dust can't pre-age a wallet", () => {
+    expect(clockStartTokens(price, R)).toBe(tokensFor(50));
+    let w = applyBalanceChange(EMPTY, tokensFor(1), T0, price, R); // park $1 early
+    expect(w.clockMs).toBeNull();
+    w = applyBalanceChange(w, tokensFor(2500), T0 + 100 * HOUR_MS, price, R); // the real buy, days later
+    expect(w.clockMs).toBe(0);
+    expect(computeHolderLevel(w, price, T0 + 100 * HOUR_MS, R)).toBe(1);
+  });
+
+  it("advancing at each check lets the speed follow the price", () => {
+    let w = applyBalanceChange(EMPTY, tokensFor(2500), T0, price, R);
+    w = advanceClock(w, T0 + DAY_MS, price, R); // 1 day at 1x
+    const doubled = { ...price, priceUsd: 0.002 }; // bag now worth $5,000 → 2x
+    expect(holdClockMs(w, T0 + 2 * DAY_MS, doubled, R)).toBeCloseTo(3 * DAY_MS);
+  });
+
+  it("levels use the higher of the 1h and 7-day prices, so a crash doesn't drop levels at once", () => {
+    expect(levelPriceUsd(0.0005, 0.001)).toBe(0.001);
+    expect(levelPriceUsd(0.002, 0.001)).toBe(0.002);
+  });
+
+  it("reports progress to the next holder level", () => {
+    const p = holderProgress(wallet(300, 10), price, T0, R);
+    expect(p.holderLevel).toBe(1);
+    expect(p.usdToNextHolder).toBeCloseTo(200);
+    expect(p.msToNextHolder).toBe(14 * HOUR_MS);
+    expect(p.speed).toBe(1);
+  });
+});
+
+describe("wallet linking", () => {
+  it("merges clocks weighted by bag, so a fresh wallet can't borrow an aged clock", () => {
+    const aged = wallet(2500, 21 * 24, "a");
+    const fresh = applyBalanceChange({ ...EMPTY, address: "b" }, tokensFor(7500), T0, price, R);
+    const g = linkWallet(aged, fresh, T0, price, R);
+    expect(g.address).toBe("a");
+    expect(g.balance).toBe(tokensFor(10000));
+    expect(g.clockMs).toBeCloseTo(0.25 * 21 * DAY_MS);
+    expect(computeHolderLevel(g, price, T0, R)).toBe(2); // 5.25 days: not H3 yet
+  });
+
+  it("linking an empty wallet changes nothing; two unstarted clocks start if the group is big enough", () => {
+    const aged = wallet(2500, 100, "a");
+    expect(linkWallet(aged, { ...EMPTY, address: "b" }, T0, price, R).clockMs).toBe(100 * HOUR_MS);
+    const dust = (addr: string) => applyBalanceChange({ ...EMPTY, address: addr }, tokensFor(30), T0, price, R);
+    expect(dust("x").clockMs).toBeNull();
+    expect(linkWallet(dust("x"), dust("y"), T0, price, R).clockMs).toBe(0); // $60 together
+  });
+
+  it("transfers inside a group aren't sales", () => {
+    const groupOf = (a: string) => ({ a: "g1", b: "g1", c: "g2" })[a];
+    expect(isInternalTransfer("a", "b", groupOf)).toBe(true);
+    expect(isInternalTransfer("a", "c", groupOf)).toBe(false);
+    expect(isInternalTransfer("a", "z", groupOf)).toBe(false);
+    expect(isInternalTransfer("y", "z", groupOf)).toBe(false);
+  });
+
+  it("unlinking counts as that wallet selling its share, and it starts over", () => {
+    const g = wallet(4000, 100, "a");
+    const { group, wallet: left } = unlinkWallet(g, { address: "b", balance: tokensFor(800) }, T0, price, R);
+    expect(group.balance).toBe(tokensFor(3200));
+    expect(group.clockMs).toBeCloseTo(50 * HOUR_MS); // sold 20% → lost half
+    expect(left.clockMs).toBe(0);
+    expect(left.balance).toBe(tokensFor(800));
+  });
+});
+
+describe("mining hours", () => {
+  it("an hour counts in full at 80%+ of the GPU's expected rate, less in proportion below", () => {
+    expect(hourCredit(0.12, 0.12, R)).toBe(1);
+    expect(hourCredit(0.096, 0.12, R)).toBeCloseTo(1); // exactly 80%
+    expect(hourCredit(0.072, 0.12, R)).toBeCloseTo(0.75); // 60% → 45 minutes
+    expect(hourCredit(0.048, 0.12, R)).toBeCloseTo(0.5); // 40% → half an hour
+    expect(hourCredit(0, 0.12, R)).toBe(0);
+  });
+
+  it("a wallet gets its best GPU's credit, since hours count while at least one GPU mines", () => {
+    const gpus = [{ actualUsd: 0.03, expectedUsd: 0.12 }, { actualUsd: 0.1, expectedUsd: 0.11 }];
+    expect(creditedHours(1, gpus, R)).toBe(1);
+    expect(creditedHours(1, [gpus[0]!], R)).toBeCloseTo(0.3125); // 25% of expected
+    expect(creditedHours(1, [], R)).toBe(0);
+  });
+});
+
+describe("miner levels", () => {
+  it("one ladder: the miner level is the holder level; no bag, no bonus (Oct 18)", () => {
+    expect(computeMinerLevel(0)).toBe(0);
+    expect(computeMinerLevel(1)).toBe(1);
+    expect(computeMinerLevel(2)).toBe(2);
+    expect(computeMinerLevel(3)).toBe(3);
+    expect(R.miner.mult).toEqual({ 0: 0, 1: 1, 2: 2, 3: 4 });
+    expect(chestShares([{ address: "nobag", earningsUsd: 5, level: 0 }], R).size).toBe(0);
+  });
+});
+
+
+describe("tax split", () => {
+  it("dev 10% at a 2% tax, 5% at a 5% tax, so dev's cut of volume stays ~0.2-0.25%", () => {
+    expect(devShareAt(0.02, R)).toBeCloseTo(0.10);
+    expect(devShareAt(0.05, R)).toBeCloseTo(0.05);
+    expect(devShareAt(0.035, R)).toBeCloseTo(0.075);
+    expect(minerMaxShareAt(0.05, R)).toBeCloseTo(0.75);
+    expect(minerMaxShareAt(0.02, R)).toBeCloseTo(0.70); // holders keep their 20%
+  });
+
+  it("miners get what reaches 5x (between 45% and their max), holders the rest", () => {
+    // $10,000 traded at 5% -> $500 tax. Miners mined $75, so they need $300 (60%) to reach 5x.
+    const s = splitTax({ taxUsd: 500, rate: 0.05, minedUsd: 75 }, R);
+    expect(s.shares.dev).toBeCloseTo(0.05);
+    expect(s.shares.miners).toBeCloseTo(0.60);
+    expect(s.shares.holders).toBeCloseTo(0.35);
+    expect(s.devUsd + s.chestUsd + s.holderUsd).toBeCloseTo(500);
+    expect(s.targetMet).toBe(true);
+  });
+
+  it("never gives miners under 45% or holders under 20%", () => {
+    const busy = splitTax({ taxUsd: 500, rate: 0.02, minedUsd: 1 }, R);
+    expect(busy.shares.miners).toBeCloseTo(0.45);
+    expect(busy.shares.holders).toBeCloseTo(0.45);
+    const quiet = splitTax({ taxUsd: 500, rate: 0.05, minedUsd: 10_000 }, R);
+    expect(quiet.shares.miners).toBeCloseTo(0.75);
+    expect(quiet.shares.holders).toBeCloseTo(0.20);
+    expect(quiet.targetMet).toBe(false);
+  });
+
+  it("counts chest carried from earlier epochs toward the target", () => {
+    const s = splitTax({ taxUsd: 500, rate: 0.05, minedUsd: 75, chestCarryUsd: 100 }, R);
+    expect(s.chestUsd).toBeCloseTo(225); // needs 300 - 100 = 200 (40%), floored at 45%
+  });
+
+  it("sets the lowest rate where miners reach 5x and holders still get 1% of volume", () => {
+    // 1,000 GPUs mining $2.50/day need $10,000/day of bonus.
+    // Quiet: even 5% can't lift miners to 5x -> stay at 5%.
+    expect(targetTaxRate({ volumeUsd: 100_000, minedUsd: 2_500 }, R)).toBeCloseTo(0.05, 6);
+    // $750 of volume per GPU (the site's launch-week estimate): 2.75% is the first rate where
+    // holders get >= 1% of volume (2.5% gives them 0.94%).
+    expect(targetTaxRate({ volumeUsd: 750_000, minedUsd: 2_500 }, R)).toBeCloseTo(0.0275, 6);
+    // Very heavy trading: the floor is 2.25%, since at 2% holders' max share (45%) is only 0.9%.
+    expect(targetTaxRate({ volumeUsd: 5_000_000, minedUsd: 2_500 }, R)).toBeCloseTo(0.0225, 6);
+    const at = splitTax({ taxUsd: 0.0275 * 750_000, rate: 0.0275, minedUsd: 2_500 }, R);
+    expect(at.holderUsd / 750_000).toBeGreaterThanOrEqual(0.01);
+  });
+
+  it("matches the site's estimate at $3.50 per GPU (Oct 14: PRL ~$1.87)", () => {
+    // 1,000 GPUs mining $3.50/day need $14,000/day of bonus. With $750/GPU of trading plus the
+    // platform's own buys, 3.25% is the first rate where holders keep >= 1% of volume once miners
+    // reach 5x (3% leaves holders 0.89%).
+    const volumeUsd = 753_500;
+    expect(targetTaxRate({ volumeUsd, minedUsd: 3_500 }, R)).toBeCloseTo(0.0325, 6);
+    const at = splitTax({ taxUsd: 0.0325 * volumeUsd, rate: 0.0325, minedUsd: 3_500 }, R);
+    expect(at.targetMet).toBe(true);
+    expect(at.shares.miners).toBeCloseTo(0.572, 3);
+    expect(at.shares.holders).toBeCloseTo(0.349, 3);
+    // Below ~$370/GPU even 5% can't lift miners to 5x.
+    expect(targetTaxRate({ volumeUsd: 360_000 + 3_500, minedUsd: 3_500 }, R)).toBeCloseTo(0.05, 6);
+  });
+});
+
+describe("holder payout", () => {
+  it("splits by bag x holder level, skips H0 and excluded wallets", () => {
+    const wallets = [
+      wallet(1000, 1, "h1"),      // H1, weight 1000
+      wallet(1000, 30, "h2"),     // H2, weight 2000
+      wallet(10, 100, "dust"),    // below H1
+      wallet(1_000_000, 999, "pool"),
+    ];
+    const r = runHolderPayout({ now: T0, potUsd: 300, wallets, price, rules: R, excluded: new Set(["pool"]) });
+    const by = Object.fromEntries(r.lines.map((l) => [l.address, l]));
+    expect(by.h1!.usd).toBeCloseTo(100);
+    expect(by.h2!.usd).toBeCloseTo(200);
+    expect(by.dust).toBeUndefined();
+    expect(by.pool).toBeUndefined();
+    expect(r.carryUsd).toBeCloseTo(0);
+  });
+
+  it("has no per-wallet cap: a big bag takes its full share and nothing carries", () => {
+    const wallets = [wallet(100_000, 999, "whale")]; // $100K at H3: weight 400,000
+    for (let i = 0; i < 40; i++) wallets.push(wallet(100, 1, "s" + i)); // $100 at H1: weight 100 each
+    const r = runHolderPayout({ now: T0, potUsd: 1000, wallets, price, rules: R });
+    expect(r.lines.find((l) => l.address === "whale")!.usd).toBeCloseTo((1000 * 400_000) / 404_000);
+    expect(r.paidUsd).toBeCloseTo(1000);
+    expect(r.carryUsd).toBeCloseTo(0);
+  });
+});
+
+describe("chest shares", () => {
+  it("weights by sqrt(earnings) × level multiplier", () => {
+    const s = chestShares([
+      { address: "a", earningsUsd: 1, level: 1 },
+      { address: "b", earningsUsd: 4, level: 1 },
+      { address: "c", earningsUsd: 1, level: 3 },
+    ], R);
+    // weights 1, 2, 4 -> shares 1/7, 2/7, 4/7
+    expect(s.get("a")).toBeCloseTo(1 / 7);
+    expect(s.get("b")).toBeCloseTo(2 / 7);
+    expect(s.get("c")).toBeCloseTo(4 / 7);
+  });
+
+  it("a single miner gets the whole chest (no per-wallet cap)", () => {
+    const s = chestShares([{ address: "solo", earningsUsd: 3, level: 1 }], R);
+    expect(s.get("solo")).toBeCloseTo(1);
+  });
+
+});
+
+describe("epoch", () => {
+  const wallets = new Map<string, WalletState>([
+    ["a", wallet(0, 0, "a")],          // H0
+    ["b", wallet(100, 48, "b")],       // H1
+    ["c", wallet(800, 480, "c")],      // H2
+  ]);
+  const earnings = new Map([["a", 0.05], ["b", 0.05], ["c", 0.05]]);
+  const base = { epochId: "e1", now: T0, earnings, wallets, price, chestUsd: 70, floatAvailableUsd: 1000, rules: R };
+
+  it("pays 75% of mining now, holds 25%, and splits the chest by level; no bag, no bonus", () => {
+    const r = runEpoch(base);
+    const byAddr = Object.fromEntries(r.lines.map((l) => [l.address, l]));
+    expect(byAddr.a!.level).toBe(0); // mines but holds nothing
+    expect(byAddr.b!.level).toBe(1);
+    expect(byAddr.c!.level).toBe(2);
+    expect(byAddr.c!.holderLevel).toBe(2);
+    expect(byAddr.a!.immediateUsd).toBeCloseTo(0.0375); // its mining is still paid
+    expect(byAddr.a!.pendingUsd).toBeCloseTo(0.0125);
+    expect(byAddr.a!.chestUsd).toBe(0);
+    expect(byAddr.b!.chestUsd).toBeCloseTo(70 / 3);
+    expect(byAddr.c!.chestUsd).toBeCloseTo(140 / 3);
+    expect(r.pending).toHaveLength(3);
+    expect(r.carryUsd).toBeCloseTo(0);
+    expect(r.totals.buyUsd).toBeCloseTo(0.1125); // only mining is bought; the chest is already $HASH
+  });
+
+  it("never pays the chest to excluded wallets", () => {
+    const r = runEpoch({ ...base, excluded: new Set(["c"]) });
+    expect(r.lines.map((l) => l.address).sort()).toEqual(["a", "b"]);
+    expect(r.totals.chestUsd).toBeCloseTo(70);
+  });
+
+  it("scales immediate payouts down to what the float holds", () => {
+    const r = runEpoch({ ...base, floatAvailableUsd: 0.05625 }); // half of 0.1125
+    expect(r.totals.immediateUsd).toBeCloseTo(0.05625);
+    expect(r.totals.pendingUsd).toBeCloseTo(0.15 - 0.05625);
+  });
+
+  it("carries chest only when no miner is eligible", () => {
+    expect(runEpoch(base).carryUsd).toBeCloseTo(0);
+    expect(runEpoch({ ...base, excluded: new Set(["a", "b", "c"]) }).carryUsd).toBeCloseTo(70);
+    expect(runEpoch({ ...base, excluded: new Set(["b", "c"]) }).carryUsd).toBeCloseTo(70); // only a miner with no bag left
+  });
+
+  it("sizes the chest on bag-holding miners' mining only", () => {
+    const x = { earnings, wallets, price, now: T0, rules: R };
+    expect(bonusMiningUsd(x)).toBeCloseTo(0.1); // b and c; a has no bag
+    expect(bonusMiningUsd({ ...x, excluded: new Set(["c"]) })).toBeCloseTo(0.05);
+  });
+});
+
+describe("settlement", () => {
+  const records = [
+    { epochId: "e", address: "a", estimatedUsd: 0.25, miningUsd: 1, immediateUsd: 0.75 },
+    { epochId: "e", address: "b", estimatedUsd: 0.75, miningUsd: 3, immediateUsd: 2.25 },
+  ];
+
+  it("pays the remainder when proceeds match the estimate", () => {
+    const s = settle(records, 4);
+    expect(s.lines[0]!.payUsd).toBeCloseTo(0.25);
+    expect(s.lines[1]!.payUsd).toBeCloseTo(0.75);
+  });
+
+  it("trues up to actual proceeds and absorbs overpayment", () => {
+    const s = settle(records, 2); // coin sold for half the estimate
+    expect(s.ratio).toBeCloseTo(0.5);
+    expect(s.totalPayUsd).toBeCloseTo(0);
+    expect(s.totalOverpaidUsd).toBeCloseTo(1);
+  });
+});
+
+describe("token split", () => {
+  it("sums exactly to tokens bought and is proportional", () => {
+    const { transfers } = splitTokens([{ address: "a", usd: 1 }, { address: "b", usd: 2 }], 1000n);
+    expect(transfers.reduce((a, t) => a + t.amount, 0n)).toBe(1000n);
+    expect(transfers.find((t) => t.address === "b")!.amount).toBeGreaterThanOrEqual(666n);
+  });
+
+  it("defers transfers below the minimum", () => {
+    const { transfers, deferred } = splitTokens([{ address: "a", usd: 1000 }, { address: "b", usd: 0.001 }], 1_000_000n, 10n);
+    expect(transfers.map((t) => t.address)).toEqual(["a"]);
+    expect(deferred.map((d) => d.address)).toEqual(["b"]);
+  });
+});

@@ -1,0 +1,106 @@
+{
+  "_note": "Pools from ForgeMiner 1.8.4's own Kryptex/LuckyPool samples (Oct 4); PRL on prl-us.kryptex.network:8048 (SSL) mined live from the app on Oct 4. PRL and QUAN on Kryptex (PPS+, public per-worker API). QUAN is Quantus (Kryptex lists it as QTC); QTC here is QubitCoin (qhash). AMD and Intel: Quantus with BzMiner (Defender-clean); SRBMiner and WildRig are flagged as Trojans. PRL and QubitCoin stay NVIDIA-only. Pool login = payoutAddress + short worker id (see packages/switcher workerId). A coin without payoutAddress is never assigned. PRL's payoutAddress is the user's own PRL address for testing (payoutAddressIsTest): set the platform's with the HASH_PAYOUT_ADDRESS_PRL environment variable; with HASH_NETWORK=mainnet the test address is refused and PRL isn't assigned until it's set. QUAN and QTC have none yet.",
+  "coins": [
+    {
+      "id": "PRL",
+      "name": "Pearl",
+      "algo": "pearlhash",
+      "enabled": true,
+      "vendors": [
+        "nvidia"
+      ],
+      "liquidityUsdPerDay": 50000,
+      "confirmHours": 10,
+      "pools": [
+        {
+          "url": "stratum+ssl://prl-us.kryptex.network:8048",
+          "region": "us"
+        },
+        {
+          "url": "stratum+ssl://prl-eu.kryptex.network:8048",
+          "region": "eu"
+        }
+      ],
+      "miner": {
+        "nvidia": "forgeminer"
+      },
+      "payoutAddress": "prl1qw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k",
+      "payoutAddressIsTest": true
+    },
+    {
+      "id": "QUAN",
+      "name": "Quantus",
+      "algo": "quantus",
+      "enabled": true,
+      "vendors": [
+        "nvidia",
+        "amd",
+        "intel"
+      ],
+      "liquidityUsdPerDay": 30000,
+      "confirmHours": 2,
+      "pools": [
+        {
+          "url": "stratum+ssl://qtc.kryptex.network:8049",
+          "region": "us"
+        },
+        {
+          "url": "stratum+ssl://qtc-eu.kryptex.network:8049",
+          "region": "eu"
+        }
+      ],
+      "miner": {
+        "nvidia": "forgeminer",
+        "amd": "bzminer",
+        "intel": "bzminer"
+      }
+    },
+    {
+      "id": "QTC",
+      "name": "QubitCoin",
+      "algo": "qhash",
+      "enabled": true,
+      "vendors": [
+        "nvidia"
+      ],
+      "liquidityUsdPerDay": 20000,
+      "confirmHours": 1,
+      "pools": [
+        {
+          "url": "stratum+ssl://ca.luckypool.io:8610",
+          "region": "us"
+        }
+      ],
+      "miner": {
+        "nvidia": "forgeminer"
+      }
+    },
+    {
+      "id": "EPIC",
+      "name": "Epic Cash",
+      "algo": "progpow-epic",
+      "enabled": false,
+      "vendors": [],
+      "liquidityUsdPerDay": 5000,
+      "confirmHours": 3,
+      "pools": [
+        {
+          "url": "stratum+tcp://epic.pool.invalid:6666",
+          "region": "us"
+        }
+      ],
+      "miner": {}
+    }
+  ],
+  "policy": {
+    "minGain": 0.12,
+    "sustainMs": 1800000,
+    "minDwellMs": 7200000
+  },
+  "score": {
+    "delayRiskPerHour": 0.002,
+    "slippageK": 0.5,
+    "slippageCap": 0.3
+  },
+  "ttlMs": 900000
+}

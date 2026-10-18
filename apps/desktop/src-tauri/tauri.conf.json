@@ -1,0 +1,29 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Hashcoin Miner",
+  "version": "0.1.0",
+  "identifier": "com.hashcoin.miner",
+  "build": { "frontendDist": "../ui" },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [{ "label": "main", "title": "Hashcoin Miner", "width": 1040, "height": 700, "minWidth": 860, "minHeight": 600, "resizable": true, "visible": false }],
+    "security": { "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/icon.png", "icons/icon.ico"],
+    "publisher": "Hashcoin",
+    "copyright": "Copyright © 2026 Hashcoin",
+    "category": "Utility",
+    "longDescription": "Mines with your graphics card when you start it, and pays you in $HASH.",
+    "shortDescription": "Mine with your GPU, get paid in $HASH",
+    "windows": { "nsis": { "installMode": "currentUser" } }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJCQ0E0QkUyNkNBODY3MEIKUldRTFo2aHM0a3ZLdTlab01XcmRiODlhNzlXN2ttWWJOaTE4NEdxemQ5U21lbEV5U0FwVCtoNjMK",
+      "windows": { "installMode": "passive" }
+    }
+  }
+}

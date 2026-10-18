@@ -1,0 +1,9 @@
+{
+  "name": "hashcoin",
+  "private": true,
+  "workspaces": ["packages/*", "services/*"],
+  "scripts": {
+    "test": "npm test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}

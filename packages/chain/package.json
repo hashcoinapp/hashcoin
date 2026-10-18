@@ -1,0 +1,23 @@
+{
+  "name": "@hashcoin/chain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "devnet": "tsx scripts/devnet-run.ts"
+  },
+  "dependencies": {
+    "@hashcoin/engine": "*",
+    "@meteora-ag/cp-amm-sdk": "1.5.1",
+    "@meteora-ag/dynamic-bonding-curve-sdk": "2.0.0",
+    "@raydium-io/raydium-sdk-v2": "^0.2.73-alpha",
+    "@solana/spl-token": "^0.4.15",
+    "@solana/web3.js": "^1.99.0"
+  },
+  "devDependencies": {
+    "@types/bn.js": "^5.2.0"
+  }
+}
