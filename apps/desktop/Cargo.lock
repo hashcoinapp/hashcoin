@@ -1594,12 +1594,13 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "windows-sys 0.61.2",
  "zip 2.4.2",
 ]
 
 [[package]]
 name = "hashcoin-miner"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "hashcoin-core",
  "serde",

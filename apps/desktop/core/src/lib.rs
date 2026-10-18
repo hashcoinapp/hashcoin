@@ -7,6 +7,7 @@ pub mod agent;
 pub mod antivirus;
 pub mod blocked;
 pub mod gpu;
+pub mod job;
 pub mod manifest;
 pub mod miner;
 pub mod safety;

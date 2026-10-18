@@ -340,6 +340,10 @@ fn main() {
         .setup(|app| {
             let config_dir = app.path().app_config_dir()?;
             let data_dir = app.path().app_local_data_dir()?;
+            // Miners an earlier run left behind (older versions didn't tie them to the app) would
+            // share the GPU with ours: stop them before anything starts.
+            let strays = hashcoin_core::job::stop_strays(&data_dir.join("miners"));
+            if strays > 0 { eprintln!("Hashcoin Miner: stopped {strays} miner(s) left running by an earlier run"); }
             let settings = load_settings(&config_dir);
             let api = server(&settings);
             eprintln!("Hashcoin Miner: settings {} | server {api}", settings_path(&config_dir).display());

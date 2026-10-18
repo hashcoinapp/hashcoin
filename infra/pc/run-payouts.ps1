@@ -25,7 +25,8 @@ if ($found) {
     $t = $line.Trim()
     if (-not $t -or $t.StartsWith("#") -or -not $t.Contains("=")) { continue }
     $i = $t.IndexOf("=")
-    [Environment]::SetEnvironmentVariable($t.Substring(0, $i).Trim(), $t.Substring($i + 1).Trim(), "Process")
+    # %USERPROFILE% and other %VARIABLES% in values are expanded.
+    [Environment]::SetEnvironmentVariable($t.Substring(0, $i).Trim(), [Environment]::ExpandEnvironmentVariables($t.Substring($i + 1).Trim()), "Process")
   }
 }
 $Data = if ($env:HASH_DATA_DIR) { $env:HASH_DATA_DIR } else { Join-Path $Repo "services\payouts\data" }

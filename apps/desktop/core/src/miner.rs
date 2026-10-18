@@ -126,6 +126,8 @@ impl Supervisor {
             self.spawn_error = e.raw_os_error();
             format!("could not start {}: {e}", self.exe.display())
         })?;
+        // Tie it to the app: if the app ends in any way, Windows stops the miner too.
+        crate::job::adopt(&child);
         self.state = MinerState::Running { pid: child.id(), since: Instant::now() };
         self.child = Some(child);
         Ok(())
