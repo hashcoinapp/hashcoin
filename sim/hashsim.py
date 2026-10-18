@@ -4,7 +4,9 @@ Daily steps. Traders generate volume that decays after launch hype; a fee on
 that volume is split between the miner chest, buyback-and-burn, and creator.
 Miners are agents (home GPUs and rented 5090s) that join and leave based on
 profit. Chest weights combine GPU balancing (earnings ** alpha), holding time,
-and a minimum $hash stake.
+and a minimum $hash stake. The `levels` scenario is the current design (one ladder,
+Oct 18): the bag sets the level for holder rewards and the miner bonus, miners with
+no bag get no bonus, and the 2-5% tax follows the engine's formula.
 
 All dollar inputs are scenario assumptions, not forecasts.
 """
@@ -14,6 +16,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import random
 import statistics
 from dataclasses import dataclass, field, asdict, replace
@@ -121,6 +124,44 @@ class Params:
     holder_mix: tuple = (0.15, 0.30, 0.35, 0.20)
     holder_sell_frac: tuple = (1.0, 0.6, 0.3, 0.1)
 
+    # One ladder (user, Oct 18; dual mode only): the miner level is the holder level. Miners with a
+    # bag earn the bonus at h_mults (1/2/4); miners with no bag are paid for mining but get no bonus,
+    # and the chest is sized on bag-holding miners' mining only. m_days is ignored.
+    one_ladder: bool = False
+
+    # The engine's tax formula (packages/engine/src/tax.ts; dual mode only). The rate moves between
+    # tax_min and tax_max: the lowest rate (in tax_step steps) at which miners reach target_total_mult
+    # and holders keep holder_min_of_volume of volume, from the last rate_lookback_days, decided once
+    # a day like the payout loop. Token-2022 makes a change live at the start of the epoch two after
+    # the one it's set in (epoch_days long); setting again replaces the pending change. Shares of the tax: dev
+    # dev_at_min -> dev_at_max as the rate rises, miners miner_share_min..miner_share_max (never
+    # leaving holders under holder_share_min), holders the rest. Starts at tax_max (the curve's rate).
+    dynamic_tax: bool = False
+    tax_min: float = 0.02
+    tax_max: float = 0.05
+    tax_step: float = 0.0025
+    dev_at_min: float = 0.10
+    dev_at_max: float = 0.05
+    miner_share_min: float = 0.45
+    miner_share_max: float = 0.75
+    holder_share_min: float = 0.20
+    holder_min_of_volume: float = 0.01
+    rate_lookback_days: int = 2
+    epoch_days: float = 2.0
+
+
+# Miners' buy-in for the one-ladder scenarios (matches apps/web/assets/js/model.js ESTIMATE.mMix):
+# targets $0 / $50 / $500 / $2,500 = no bag / Level 1 / 2 / 3, held by 20% / 25% / 35% / 20%.
+BAG_TARGETS = (0.0, 50.0, 500.0, 2500.0)
+BAG_MIX = (0.20, 0.25, 0.35, 0.20)
+
+
+def bag_mix(share):
+    """Miner buy-in mix with `share` of miners holding a bag, split over Levels 1-3 like BAG_MIX."""
+    share = max(0.0, min(1.0, share))
+    held = 1 - BAG_MIX[0]
+    return (1 - share,) + tuple(share * x / held for x in BAG_MIX[1:])
+
 
 @dataclass
 class Miner:
@@ -140,6 +181,7 @@ class Miner:
     target_usd: float = 0.0
     level: int = 1
     clock: float = 0.0               # hold clock (days); selling shrinks it in proportion
+    clock_on: bool = False           # the clock starts when the bag first reaches the H1 size
     hlevel: int = 0                  # holder level 0-3 (dual mode)
     holder_paid_usd: float = 0.0
 
@@ -189,7 +231,44 @@ def holder_level(p, value, clock):
     return lvl
 
 
+def dev_share_at(p, rate):
+    """Dev's share of the tax: dev_at_min at tax_min, dev_at_max at tax_max (engine devShareAt)."""
+    t = min(1.0, max(0.0, (rate - p.tax_min) / (p.tax_max - p.tax_min))) if p.tax_max > p.tax_min else 0.0
+    return p.dev_at_min + (p.dev_at_max - p.dev_at_min) * t
+
+
+def miner_max_share_at(p, rate):
+    return min(p.miner_share_max, 1 - dev_share_at(p, rate) - p.holder_share_min)
+
+
+def split_tax(p, tax_usd, rate, mined_usd, carry=0.0):
+    """(dev, miners, holders) shares of the tax and whether the target is met (engine splitTax).
+    mined_usd is what the chest is sized on: bag-holding miners' mining in the one-ladder design."""
+    dev = dev_share_at(p, rate)
+    mmax = miner_max_share_at(p, rate)
+    if tax_usd <= 0:
+        return dev, p.miner_share_min, 1 - dev - p.miner_share_min, False
+    need = max(0.0, (p.target_total_mult - 1) * max(0.0, mined_usd) - carry)
+    miners = min(mmax, max(p.miner_share_min, need / tax_usd))
+    return dev, miners, 1 - dev - miners, need <= mmax * tax_usd
+
+
+def target_tax_rate(p, volume_usd, mined_usd):
+    """Lowest rate where miners reach the target and holders keep their minimum (engine targetTaxRate)."""
+    if volume_usd <= 0:
+        return p.tax_max
+    steps = round((p.tax_max - p.tax_min) / p.tax_step)
+    for i in range(steps + 1):
+        rate = round(p.tax_min + i * p.tax_step, 6)
+        _, _, holders, met = split_tax(p, rate * volume_usd, rate, mined_usd)
+        if met and holders * rate * volume_usd >= p.holder_min_of_volume * volume_usd - 1e-9:
+            return rate
+    return p.tax_max
+
+
 def miner_level(p, tenure, hlevel):
+    if p.one_ladder:
+        return hlevel  # 0 = no bag: mining paid, no bonus
     if tenure >= p.m_days[2] and hlevel >= 2:
         return 3
     if tenure >= p.m_days[1] and hlevel >= 1:
@@ -219,10 +298,20 @@ def run(p: Params):
     last_chest_per_weight = 0.0
     rows = []
     carry = 0.0
-    fee_total = p.tax_total if p.dual else p.fee_chest + p.fee_burn + p.fee_creator
+    dyn = p.dual and p.dynamic_tax
+    if dyn:
+        fee_total = p.tax_max  # the rate in force; the formula moves it after launch
+    else:
+        fee_total = p.tax_total if p.dual else p.fee_chest + p.fee_burn + p.fee_creator
+    pending_rate = None  # (day it goes live, rate): one scheduled change at a time, like Token-2022
+    vol_hist, mined_hist = [], []
     chest_rate = p.chest_max
+    cum = dict(bag_mined=0.0, bag_bonus=0.0, nobag_mined=0.0, nobag_bonus=0.0)
 
     for day in range(p.days):
+        if pending_rate and pending_rate[0] <= day:
+            fee_total = pending_rate[1]
+            pending_rate = None
         price = pool.price
         mcap = price * supply
         hype = (0.5 ** (day / p.hype_halflife))
@@ -245,7 +334,8 @@ def run(p: Params):
         # --- renters: estimate per-card chest share from yesterday
         if last_chest_per_weight > 0:
             if p.dual:
-                rent_mult = p.m_mults[1]   # renters hold $50 for H1, so they can reach M2
+                # renters hold $50: H1, so Level 1 on one ladder, or enough for M2 on two ladders
+                rent_mult = p.h_mults[0] if p.one_ladder else p.m_mults[1]
             else:
                 rent_mult = p.level_mults[1] if p.levels else p.hold_min_mult
             w_wallet = (p.rent_rev_day * p.rent_cards_per_wallet) ** p.alpha * rent_mult
@@ -260,9 +350,9 @@ def run(p: Params):
                     miners.append(r)
         alive = [m for m in miners if m.alive]
 
-        # --- hold clocks tick for anyone holding
+        # --- hold clocks tick for anyone whose clock has started
         for m in alive:
-            if m.hash_tokens > 0:
+            if m.clock_on:
                 speed = 1.0
                 if p.h_speed_per_usd > 0:
                     speed = min(p.h_max_speed, max(1.0, m.hash_tokens * pool.price / p.h_speed_per_usd))
@@ -280,6 +370,8 @@ def run(p: Params):
                     stake_buys += usd
                     if m.first_hash_day < 0:
                         m.first_hash_day = day
+                if not m.clock_on and m.hash_tokens * pool.price >= p.h_usd[0]:
+                    m.clock_on, m.clock = True, 0.0
                 m.stake_ok = True
                 continue
             if p.min_stake_usd > 0 and m.hash_tokens * price < p.min_stake_usd:
@@ -302,12 +394,30 @@ def run(p: Params):
             pool.sell(-net / pool.price)
         volume_all = volume + stake_buys
 
-        # --- split the tax
-        if p.dual and p.target_total_mult > 0:
-            mined_now = sum(m.rev for m in alive)
-            need = (p.target_total_mult - 1) * mined_now - carry
-            chest_rate = max(p.chest_floor, min(p.chest_max, need / volume_all if volume_all else p.chest_max))
+        # --- levels at payout time (dual: holder level from bag + clock, miner level from it)
         if p.dual:
+            for m in alive:
+                m.hlevel = holder_level(p, m.hash_tokens * pool.price, m.clock)
+                m.level = miner_level(p, day - m.joined + 1, m.hlevel)
+        mined_usd = sum(m.rev for m in alive)
+        bag_mined = sum(m.rev for m in alive if m.hlevel > 0)
+        # What the chest is sized on: on one ladder only miners with a bag earn the bonus
+        chest_base = bag_mined if p.one_ladder else mined_usd
+
+        # --- split the tax
+        if dyn:
+            tax_usd = volume_all * fee_total
+            dev_s, miner_s, holder_s, _ = split_tax(p, tax_usd, fee_total, chest_base, carry)
+            chest_rate = fee_total * miner_s
+            chest_usd = tax_usd * miner_s + carry
+            holder_side = tax_usd * holder_s
+            burn_usd = holder_side * p.holder_burn_frac
+            holder_pot = holder_side - burn_usd
+            dev_usd = tax_usd * dev_s
+        elif p.dual:
+            if p.target_total_mult > 0:
+                need = (p.target_total_mult - 1) * chest_base - carry
+                chest_rate = max(p.chest_floor, min(p.chest_max, need / volume_all if volume_all else p.chest_max))
             chest_usd = volume_all * chest_rate + carry
             holder_side = volume_all * max(0.0, p.tax_total - p.tax_dev - chest_rate)
             burn_usd = holder_side * p.holder_burn_frac
@@ -331,8 +441,7 @@ def run(p: Params):
         burned += b
         supply -= b
 
-        # --- miner levels and weights
-        mined_usd = sum(m.rev for m in alive)
+        # --- miner weights
         taxed = (1 - fee_total) if p.platform_buys_taxed else 1.0
         weights = {}
         for m in alive:
@@ -340,9 +449,10 @@ def run(p: Params):
                 continue
             val = m.hash_tokens * pool.price
             if p.dual:
-                m.hlevel = holder_level(p, val, m.clock)
-                m.level = miner_level(p, day - m.joined + 1, m.hlevel)
-                w = m.rev ** p.alpha * p.m_mults[m.level - 1]
+                if m.level == 0:
+                    continue  # one ladder: no bag, no bonus
+                mults = p.h_mults if p.one_ladder else p.m_mults
+                w = m.rev ** p.alpha * mults[m.level - 1]
             elif p.levels:
                 if (val >= p.l3_usd and not m.ever_sold and m.first_hash_day >= 0
                         and day - m.first_hash_day >= p.l3_days):
@@ -376,6 +486,7 @@ def run(p: Params):
         paid_share = sum(shares.values())
         carry = chest_usd * (1 - paid_share)
         chest_paid = chest_usd * paid_share
+        chest_to_bag = sum(chest_usd * shares.get(id(m), 0.0) for m in alive if m.hlevel > 0)
 
         # --- pay out: mined coins become a market buy; the chest is paid in tax tokens
         if p.fee_in_tokens:
@@ -411,13 +522,15 @@ def run(p: Params):
                         m.holder_paid_usd += usd
 
         home_extra_pct = []
-        lvl_extra = {1: [], 2: [], 3: []}
+        lvl_extra = {0: [], 1: [], 2: [], 3: []}
         for m in alive:
             s = shares.get(id(m), 0.0)
             pay = m.rev + chest_usd * s
             m.hash_tokens += m.rev * per_usd_mined + chest_usd * s * per_usd_chest
             if m.first_hash_day < 0:
                 m.first_hash_day = day
+            if p.dual and not m.clock_on and m.hash_tokens * pool.price >= p.h_usd[0]:
+                m.clock_on, m.clock = True, 0.0  # mined $HASH counts toward the bag
             m.paid_usd += pay
             m.cost_basis_usd += m.cost
             extra = (chest_usd * s + holder_income.get(id(m), 0.0)) / m.rev
@@ -426,6 +539,12 @@ def run(p: Params):
                 home_extra_pct.append(extra * 100)
                 lvl_extra[m.level].append(extra * 100)
         chest_to_renters = sum(chest_usd * shares.get(id(m), 0) for m in alive if m.kind == "rent")
+        cum["bag_mined"] += bag_mined
+        cum["bag_bonus"] += chest_to_bag
+        cum["nobag_mined"] += mined_usd - bag_mined
+        cum["nobag_bonus"] += chest_paid - chest_to_bag
+        home_bag = sum(1 for m in alive if m.kind == "home" and m.hlevel > 0)
+        home_n = sum(1 for m in alive if m.kind == "home")
 
         # --- exits / sells
         for m in alive:
@@ -446,7 +565,7 @@ def run(p: Params):
                     if m.rev * (1 + avg) < m.cost + p.rent_hurdle * (m.rev / p.rent_rev_day):
                         pool.sell(m.hash_tokens * (1 - fee_total))
                         m.hash_tokens = 0
-                        m.clock = 0
+                        m.clock, m.clock_on = 0, False
                         m.alive = False
             else:
                 avg = statistics.mean(m.trailing) if m.trailing else 0
@@ -456,7 +575,7 @@ def run(p: Params):
                     pool.sell(m.hash_tokens * (1 - fee_total))
                     m.hash_tokens = 0
                     m.ever_sold = True
-                    m.clock = 0
+                    m.clock, m.clock_on = 0, False
                     if quit_:
                         m.alive = False
                     else:
@@ -468,20 +587,43 @@ def run(p: Params):
         # --- dynamic split: move the chest rate toward the target for today's boost
         boost = chest_paid / mined_usd if mined_usd else 0
         rate_today = chest_rate
-        if p.dual and p.target_total_mult <= 0:
+        tax_today = fee_total
+        if p.dual and not dyn and p.target_total_mult <= 0:
             tgt = target_chest_rate(p, boost)
             chest_rate += max(-p.split_step, min(p.split_step, tgt - chest_rate))
 
+        # --- tax formula: decide from the last few days; live at the start of epoch + 2
+        vol_hist.append(volume_all)
+        mined_hist.append(chest_base)
+        want = fee_total
+        if dyn:
+            n = p.rate_lookback_days
+            want = target_tax_rate(p, sum(vol_hist[-n:]), sum(mined_hist[-n:]))
+            current = pending_rate[1] if pending_rate else fee_total
+            if abs(want - current) > 1e-9:
+                epoch = int((day + 1) // p.epoch_days)  # decided at the end of the day
+                pending_rate = (math.ceil((epoch + 2) * p.epoch_days), want)
+
         home_alive = [m for m in miners if m.alive and m.kind == "home"]
         rent_alive = [m for m in miners if m.alive and m.kind == "rent"]
+        nobag_mined = mined_usd - bag_mined
+        n_gpus = sum(round(m.rev / p.rent_rev_day) if m.kind == "rent" else 1 for m in alive)
         rows.append({
             "day": day + 1,
             "price_x": round(pool.price / (p.start_mcap / p.supply), 4),
             "mcap": round(pool.price * supply),
             "volume": round(volume_all),
+            "vol_per_gpu": round(volume_all / max(1, n_gpus)),
+            "tax_rate_pct": round(100 * tax_today, 2),
+            "tax_want_pct": round(100 * want, 2),
             "chest": round(chest_usd),
             "chest_rate_pct": round(100 * (rate_today if p.dual else p.fee_chest), 2),
             "boost_x": round(boost, 2),
+            # pay (mining + bonus) / mining: miners with a bag (the 5x target), without, all
+            "bag_mult_x": round((bag_mined + chest_to_bag) / bag_mined, 2) if bag_mined else 0,
+            "nobag_mult_x": round((nobag_mined + chest_paid - chest_to_bag) / nobag_mined, 2) if nobag_mined else 0,
+            "all_mult_x": round((mined_usd + chest_paid) / mined_usd, 2) if mined_usd else 0,
+            "home_bag_pct": round(100 * home_bag / home_n, 1) if home_n else 0,
             "holder_pot": round(holder_pot),
             **{f"H{k}_yield_pct_day": round(100 * holder_yield[k], 3) for k in (1, 2, 3)},
             "burn_usd": round(burn_usd),
@@ -498,6 +640,7 @@ def run(p: Params):
         })
 
     homes = [m for m in miners if m.kind == "home"]
+    nobag = [m for m in homes if m.target_usd <= 0]
     d7, d30 = rows[min(6, p.days - 1)], rows[min(29, p.days - 1)]
     summary = {
         "final_price_x": rows[-1]["price_x"],
@@ -510,18 +653,36 @@ def run(p: Params):
         "median_extra_day30": d30["home_extra_median_pct"],
         "median_extra_final": rows[-1]["home_extra_median_pct"],
         "avg_renter_chest_pct": round(statistics.mean(r["renter_chest_pct"] for r in rows), 1),
+        "tax_rate_day7": d7["tax_rate_pct"],
+        "tax_rate_day30": d30["tax_rate_pct"],
+        "tax_rate_final": rows[-1]["tax_rate_pct"],
+        "tax_rate_avg": round(statistics.mean(r["tax_rate_pct"] for r in rows), 2),
         "chest_rate_day7": d7["chest_rate_pct"],
         "chest_rate_day30": d30["chest_rate_pct"],
         "chest_rate_final": rows[-1]["chest_rate_pct"],
         "boost_day7": d7["boost_x"],
         "boost_day30": d30["boost_x"],
         "boost_final": rows[-1]["boost_x"],
+        "bag_mult_day7": d7["bag_mult_x"],
+        "bag_mult_day30": d30["bag_mult_x"],
+        "bag_mult_final": rows[-1]["bag_mult_x"],
+        # whole run: (mining + bonus) / mining for miners with a bag, without one, and everyone
+        # (bag columns are for dual mode; the older modes have no holder levels)
+        "bag_mult_run": round(1 + cum["bag_bonus"] / cum["bag_mined"], 2) if cum["bag_mined"] else 0,
+        "nobag_mult_run": round(1 + cum["nobag_bonus"] / cum["nobag_mined"], 2) if cum["nobag_mined"] else 1,
+        "all_mult_run": round(1 + (cum["bag_bonus"] + cum["nobag_bonus"]) / (cum["bag_mined"] + cum["nobag_mined"]), 2)
+                        if cum["bag_mined"] + cum["nobag_mined"] else 0,
+        "home_miners_day30": d30["home_miners"],
+        "home_bag_pct_day30": d30["home_bag_pct"],
+        # home miners who joined without buying a bag, and the share of them who quit mining
+        "nobag_joined": len(nobag),
+        "nobag_quit_pct": round(100 * sum(1 for m in nobag if not m.alive) / len(nobag), 1) if nobag else 0,
         "days_at_target": sum(1 for r in rows if r["chest_rate_pct"] < 100 * p.chest_max - 1e-6) if p.dual else 0,
         "holder_pot_total": sum(r["holder_pot"] for r in rows),
         **{f"H{k}_yield_day7": d7[f"H{k}_yield_pct_day"] for k in (1, 2, 3)},
         **{f"H{k}_yield_day30": d30[f"H{k}_yield_pct_day"] for k in (1, 2, 3)},
-        **{f"L{l}_extra_day30": d30[f"L{l}_extra_median_pct"] for l in (1, 2, 3)},
-        **{f"L{l}_home_day30": d30[f"L{l}_home"] for l in (1, 2, 3)},
+        **{f"L{l}_extra_day30": d30[f"L{l}_extra_median_pct"] for l in (0, 1, 2, 3)},
+        **{f"L{l}_home_day30": d30[f"L{l}_home"] for l in (0, 1, 2, 3)},
     }
     return rows, summary
 
@@ -536,8 +697,32 @@ SCENARIOS = {
     "linear_weights": dict(alpha=1.0),
     "cheap_rentals": dict(rent_cost_day=10.5),
     "slow_hype": dict(hype_halflife=4, turnover0=0.12),
-    # Level system: L1 free 1x, L2 >= $50 2x, L3 >= $500 + 14d + never sold 4x
-    "levels": dict(levels=True, hold_ramp_days=0, min_stake_usd=0),
+    # Decided design (user, Oct 18): one ladder. The bag sets the level for holder rewards and the
+    # miner bonus (Level 1 $50+, Level 2 $500+ held 1 day, Level 3 $2,500+ held 7 days; 1/2/4);
+    # miners with no bag get no bonus; the chest is sized on bag-holding miners' mining. Engine tax
+    # formula (2-5%), 80% of miners hold a bag (BAG_MIX). CI runs this one.
+    "levels": dict(dual=True, one_ladder=True, dynamic_tax=True, hold_ramp_days=0, min_stake_usd=0,
+                   holder_burn_frac=0.0, target_total_mult=5.0,
+                   h_days=(0.0, 1.0, 7.0), h_speed_per_usd=2500.0, h_max_speed=3.0, sell_penalty=2.5,
+                   home_targets_dual=BAG_TARGETS, home_target_probs_dual=BAG_MIX),
+    # The design it replaced (Oct 4-17): two ladders (M1 any miner, M2 48h + H1, M3 120h + H2) with
+    # the chest sized on all mining; same tax formula and buy-in, so only the ladder differs
+    "two_ladders": dict(dual=True, one_ladder=False, dynamic_tax=True, hold_ramp_days=0, min_stake_usd=0,
+                        holder_burn_frac=0.0, target_total_mult=5.0,
+                        h_days=(0.0, 1.0, 7.0), h_speed_per_usd=2500.0, h_max_speed=3.0, sell_penalty=2.5,
+                        home_targets_dual=BAG_TARGETS, home_target_probs_dual=BAG_MIX),
+    # One ladder if only half of miners hold a bag, and if trading volume is 30% lower
+    "levels_bag50": dict(dual=True, one_ladder=True, dynamic_tax=True, hold_ramp_days=0, min_stake_usd=0,
+                         holder_burn_frac=0.0, target_total_mult=5.0,
+                         h_days=(0.0, 1.0, 7.0), h_speed_per_usd=2500.0, h_max_speed=3.0, sell_penalty=2.5,
+                         home_targets_dual=BAG_TARGETS, home_target_probs_dual=bag_mix(0.5)),
+    "levels_vol70": dict(dual=True, one_ladder=True, dynamic_tax=True, hold_ramp_days=0, min_stake_usd=0,
+                         holder_burn_frac=0.0, target_total_mult=5.0,
+                         h_days=(0.0, 1.0, 7.0), h_speed_per_usd=2500.0, h_max_speed=3.0, sell_penalty=2.5,
+                         home_targets_dual=BAG_TARGETS, home_target_probs_dual=BAG_MIX,
+                         turnover0=0.14, turnover_floor=0.021),
+    # First level system (Oct 3, before the two ladders): L1 free 1x, L2 >= $50 2x, L3 >= $500 + 14d + never sold 4x
+    "levels_v1": dict(levels=True, hold_ramp_days=0, min_stake_usd=0),
     "levels_1_3_6": dict(levels=True, hold_ramp_days=0, min_stake_usd=0, level_mults=(1.0, 3.0, 6.0)),
     "levels_few_l3": dict(levels=True, hold_ramp_days=0, min_stake_usd=0, home_target_probs=(0.6, 0.35, 0.05)),
     # Current design (Oct 3): fixed 3% = 2.5% chest + 0.5% dev, no burn, levels 1/2/4
@@ -586,24 +771,50 @@ SCENARIOS = {
 }
 
 
+def check(p: Params, vol_per_gpu, avg_rev, bag_share):
+    """Steady-state point, same inputs as the engine and the site: daily volume and mining per GPU."""
+    one = target_tax_rate(p, vol_per_gpu, avg_rev * bag_share)
+    two = target_tax_rate(p, vol_per_gpu, avg_rev)
+    out = {}
+    for name, rate, base in (("one ladder", one, avg_rev * bag_share), ("two ladders", two, avg_rev)):
+        dev, miners, holders, met = split_tax(p, rate * vol_per_gpu, rate, base)
+        chest = rate * vol_per_gpu * miners
+        bag_mult = 1 + chest / (avg_rev * bag_share) if name == "one ladder" else 1 + chest / avg_rev
+        out[name] = dict(tax_pct=round(100 * rate, 2), dev=round(dev, 4), miners=round(miners, 4),
+                         holders=round(holders, 4), holders_of_volume_pct=round(100 * rate * holders, 3),
+                         target_met=met, bag_miner_mult=round(bag_mult, 2))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenario", default="all")
     ap.add_argument("--seeds", type=int, default=20)
     ap.add_argument("--out", default="sim/out")
     ap.add_argument("--set", nargs="*", default=[], help="override params, e.g. min_stake_usd=100")
+    ap.add_argument("--bag-share", type=float, default=None,
+                    help="share of home miners who hold a bag (0-1), split over Levels 1-3 like the "
+                         "default 25/35/20; applies to the dual-mode scenarios (default: each scenario's own, 0.8 for levels)")
+    ap.add_argument("--check", nargs=3, type=float, metavar=("VOL_PER_GPU", "AVG_REV", "BAG_SHARE"),
+                    help="print the tax formula's steady state for one and two ladders, e.g. --check 750 3.5 0.8")
     a = ap.parse_args()
+    if a.check:
+        print(json.dumps(check(replace(Params(), **SCENARIOS["levels"]), *a.check), indent=2))
+        return
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     overrides = {}
     for kv in a.set:
         k, v = kv.split("=", 1)
-        overrides[k] = json.loads(v) if v not in ("True", "False") else v == "True"
+        v = json.loads(v) if v not in ("True", "False") else v == "True"
+        overrides[k] = tuple(v) if isinstance(v, list) else v
     names = list(SCENARIOS) if a.scenario == "all" else [a.scenario]
 
     table = []
     for name in names:
-        base = replace(Params(), **SCENARIOS[name], **overrides)
+        base = replace(Params(), **{**SCENARIOS[name], **overrides})
+        if a.bag_share is not None and base.dual:
+            base = replace(base, home_targets_dual=BAG_TARGETS, home_target_probs_dual=bag_mix(a.bag_share))
         sums = []
         for s in range(a.seeds):
             rows, summ = run(replace(base, seed=s + 1))
@@ -618,9 +829,13 @@ def main():
         table.append(med)
 
     cols = ["scenario", "median_extra_day7", "median_extra_day30", "median_extra_final",
-            "L1_extra_day30", "L2_extra_day30", "L3_extra_day30",
-            "L1_home_day30", "L2_home_day30", "L3_home_day30", "avg_renter_chest_pct", "peak_rent_cards", "home_miners_ever",
+            "L0_extra_day30", "L1_extra_day30", "L2_extra_day30", "L3_extra_day30",
+            "L0_home_day30", "L1_home_day30", "L2_home_day30", "L3_home_day30", "home_bag_pct_day30",
+            "avg_renter_chest_pct", "peak_rent_cards", "home_miners_ever",
+            "tax_rate_day7", "tax_rate_day30", "tax_rate_final", "tax_rate_avg",
             "chest_rate_day7", "chest_rate_day30", "chest_rate_final", "boost_day7", "boost_day30", "boost_final",
+            "bag_mult_day7", "bag_mult_day30", "bag_mult_final", "bag_mult_run", "nobag_mult_run", "all_mult_run",
+            "home_miners_day30", "nobag_joined", "nobag_quit_pct",
             "days_at_target", "holder_pot_total",
             "H1_yield_day7", "H2_yield_day7", "H3_yield_day7", "H1_yield_day30", "H2_yield_day30", "H3_yield_day30",
             "final_price_x", "burned_pct", "creator_total"]
