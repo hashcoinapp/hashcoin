@@ -39,6 +39,10 @@ npm run typecheck
 
 The desktop app: `cd apps/desktop/src-tauri && cargo test` (Rust, stable).
 
+## License
+
+MIT. See `LICENSE`.
+
 ## Security
 
 Hashcoin never asks for a seed phrase or private key and never DMs first. The app needs only a public wallet address.
