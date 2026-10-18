@@ -14,3 +14,4 @@
 - [Website](https://hashcoin.app)
 - [X](https://x.com/HashcoinSOL)
 - [Discord](https://discord.gg/XVYCbKD7mA)
+- [Source code](https://github.com/hashcoinapp/hashcoin): the app, payout engine, server and website. Installers are built by GitHub Actions with build attestations.

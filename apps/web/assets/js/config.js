@@ -20,5 +20,5 @@ window.HASHCOIN = Object.assign({
   // Social links. null shows "coming soon".
   x: "https://x.com/HashcoinSOL",
   discord: "https://discord.gg/XVYCbKD7mA",
-  github: null,
+  github: "https://github.com/hashcoinapp/hashcoin",
 }, window.HASHCOIN || {});

@@ -64,6 +64,10 @@
       a.target = "_blank";
       a.rel = "noopener";
       a.removeAttribute("data-soon");
+      // Drop the "Soon" markers once the link is live.
+      a.querySelectorAll(".tag").forEach((t) => t.remove());
+      a.childNodes.forEach((n) => { if (n.nodeType === 3) n.textContent = n.textContent.replace(/\s*\(soon\)/i, ""); });
+      if (a.getAttribute("aria-label")) a.setAttribute("aria-label", a.getAttribute("aria-label").replace(/\s*\(coming soon\)/i, ""));
     }
   });
 
