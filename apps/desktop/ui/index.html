@@ -115,6 +115,7 @@
 
   /* Levels: two ladders side by side */
   .levels { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .kept-note { margin: 12px 0 0; font-size: 12.5px; }
   .ladder { display: grid; gap: 12px; align-content: start; }
   .ladder-head { display: flex; align-items: center; gap: 12px; }
   .badge { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; background: var(--gold); color: var(--gold-ink); font-size: 18px; flex: none; }
@@ -301,6 +302,7 @@
         <div class="levels">
           <div class="ladder" id="level-ladder"></div>
         </div>
+        <p class="muted kept-note" id="kept-note" hidden></p>
       </div>
 
       <div class="market">
@@ -461,6 +463,12 @@
     $("pending").textContent = a ? usd(a.pendingUsd ?? 0) : "–";
     ladder($("level-ladder"), "Level", LEVELS, a?.holderLevel ?? 0, a, "Hold $50 of $HASH for holder rewards and the miner bonus. Without a bag, your mining is still paid in $HASH.");
     $("levels-note").textContent = a ? "" : "Updates after your first payout";
+    // Keep what you earn: the share of the last 14 days' payouts not sold scales the miner bonus.
+    const kept = a?.keptShare;
+    $("kept-note").hidden = kept == null;
+    if (kept != null) $("kept-note").textContent = kept >= 0.995
+      ? "You've kept all you earned in the last 14 days, so you get the full miner bonus."
+      : `You've kept ${Math.round(100 * kept)}% of what you earned in the last 14 days, so your miner bonus is ${Math.round(100 * kept)}% of the full amount. Keep what you earn to get it all.`;
   }
 
   function renderSplit() {

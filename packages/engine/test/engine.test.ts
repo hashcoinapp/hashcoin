@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  DAY_MS, DEFAULT_RULES, HOUR_MS, advanceClock, applyBalanceChange, bonusMiningUsd, chestShares, clockSpeed, clockStartTokens,
+  DAY_MS, DEFAULT_RULES, HOUR_MS, advanceClock, applyBalanceChange, bonusMiningUsd, chestShares, keptShare, clockSpeed, clockStartTokens,
   computeHolderLevel, computeMinerLevel, creditedHours, holdClockMs, hourCredit, isInternalTransfer, linkWallet, unlinkWallet, holderProgress, levelPriceUsd, runEpoch,
   runHolderPayout, settle, splitTax, splitTokens, devShareAt, minerMaxShareAt, targetTaxRate, type WalletState, type WeightInput,
 } from "../src/index.js";
@@ -157,6 +157,29 @@ describe("mining hours", () => {
 });
 
 describe("miner levels", () => {
+  it("keep what you earn: kept = 1 − (sent out − bought in) ÷ paid, 0 to 1 (Oct 18)", () => {
+    expect(keptShare(undefined)).toBe(1); // no recent payouts: full bonus
+    expect(keptShare({ paid: 0, out: 500, in: 0 })).toBe(1);
+    expect(keptShare({ paid: 100, out: 0, in: 0 })).toBe(1);
+    expect(keptShare({ paid: 100, out: 50, in: 0 })).toBeCloseTo(0.5);
+    expect(keptShare({ paid: 100, out: 100, in: 0 })).toBe(0);
+    expect(keptShare({ paid: 100, out: 300, in: 0 })).toBe(0);
+    expect(keptShare({ paid: 100, out: 80, in: 60 })).toBeCloseTo(0.8); // buying back cancels selling
+    expect(keptShare({ paid: 100, out: 0, in: 900 })).toBe(1);
+    expect(R.miner.keptDays).toBe(14);
+  });
+
+  it("the bonus is scaled by what a miner kept", () => {
+    const s = chestShares([
+      { address: "keeper", earningsUsd: 4, level: 1, kept: 1 },
+      { address: "seller", earningsUsd: 4, level: 1, kept: 0.5 },
+      { address: "dumper", earningsUsd: 4, level: 1, kept: 0 },
+    ], R);
+    expect(s.get("keeper")).toBeCloseTo(2 / 3);
+    expect(s.get("seller")).toBeCloseTo(1 / 3);
+    expect(s.has("dumper")).toBe(false);
+  });
+
   it("one ladder: the miner level is the holder level; no bag, no bonus (Oct 18)", () => {
     expect(computeMinerLevel(0)).toBe(0);
     expect(computeMinerLevel(1)).toBe(1);
@@ -325,6 +348,7 @@ describe("epoch", () => {
     const x = { earnings, wallets, price, now: T0, rules: R };
     expect(bonusMiningUsd(x)).toBeCloseTo(0.1); // b and c; a has no bag
     expect(bonusMiningUsd({ ...x, excluded: new Set(["c"]) })).toBeCloseTo(0.05);
+    expect(bonusMiningUsd({ ...x, kept: new Map([["b", 0.5], ["c", 0]]) })).toBeCloseTo(0.025); // sold pay shrinks the chest
   });
 });
 

@@ -26,7 +26,7 @@ $HASH is a Solana token (Token-2022) with a 2–5% tax on every transfer, buy an
 
 - **Mining adds buying of 1× its value, no more.** A GPU that mines $3.50 a day leads to $3.50 a day of $HASH bought on the market.
 - **The bonus is not new buying.** It is $HASH collected as tax from traders and handed to miners with a bag. So miners are paid by trading volume.
-- **If miners sell what they're paid, mining adds more selling than buying.** That's why the bonus only goes to miners who hold at least $50 of $HASH, grows with the bag (levels), and selling resets the hold clock. Whether miners hold is up to them.
+- **If miners sell what they're paid, mining adds more selling than buying.** That's why the bonus only goes to miners who hold at least $50 of $HASH, grows with the bag (levels), and is scaled by how much of their recent pay they've kept (below). Selling also resets the hold clock. Whether miners hold is still up to them.
 - **Holder rewards are trading volume × the tax.** When trading slows, rewards shrink and the tax rises to 5%.
 
 How it works out per mining GPU, if every miner holds a bag (average GPU, $3.50 a day; the engine's own formula):
@@ -69,6 +69,7 @@ One ladder. The bag sets the level, and the level counts for both holder rewards
 - **Holder share** = bag × weight.
 - **Miner bonus share** = √(the GPU's mining earnings in USD) × weight. The square root gives smaller cards a bigger boost relative to what they mine.
 - Mined $HASH counts toward the bag, so a miner can reach Level 1 by mining alone.
+- **Keep what you earn:** the miner bonus is also scaled by how much of the last 14 days' payouts the wallet hasn't sold: kept = 1 − (sent out − bought in) ÷ paid, between 0 and 1. Kept it all, full bonus; sold half, half the bonus; sold it all, none. The bonus given up stays with holders. It's computed from public on-chain transfers.
 - **Hold clock:** starts when a bag first reaches $50 and keeps running through price dips. Bigger bags age faster (1× up to $2,500, 2× at $5,000, 3× at $7,500+). **Selling or sending $HASH out resets it.** Wallets can be linked (by signing a message) so moving between your own wallets doesn't count.
 - **Prices for levels** use the higher of the 1-hour and 7-day average prices, so a sudden dip doesn't drop a level; a level lost in a long dip returns as soon as the bag is back above the line.
 - Splitting a bag across wallets earns nothing extra: holder rewards follow bag size.

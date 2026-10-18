@@ -1,8 +1,8 @@
 // The public record: totals, the tax rate, recent rounds with their transactions, and each
 // wallet's levels and what it has been paid. Served by services/api (/v1/stats, /v1/wallet/:address).
-import { computeHolderLevel, computeMinerLevel, holdClockMs, positionUsd, type PriceContext, type Rules } from "@hashcoin/engine";
+import { computeHolderLevel, computeMinerLevel, holdClockMs, keptShare, positionUsd, type PriceContext, type Rules } from "@hashcoin/engine";
 import { DAY_MS } from "@hashcoin/engine";
-import { dayKey, type Ledger, walletState } from "./ledger.js";
+import { dayKey, type Ledger, walletFlows, walletState } from "./ledger.js";
 
 export interface RoundSummary {
   round: number;
@@ -58,6 +58,8 @@ export function publicRecord(l: Ledger, x: {
       balanceTokens: tokens(s?.balance ?? "0"), balanceUsd: positionUsd(w.balance, x.price),
       holderLevel, minerLevel: hours > 0 ? computeMinerLevel(holderLevel) : null,
       holdClockHours: holdClockMs(w, x.now, levelPrice, x.rules) / 3_600_000, hoursMinedInWindow: hours,
+      // Keep what you earn: share of the last 14 days' payouts not sold (scales the miner bonus).
+      keptShare: keptShare(walletFlows(l, a, x.now, x.rules.miner.keptDays)),
       paidTokens: { miner: tokens(paid.miner), holder: tokens(paid.holder) },
       // Held-back mining (paid once the mined coin sells) plus payouts that failed and will be retried.
       pendingUsd: l.pending.filter((p) => p.address === a).reduce((s, p) => s + p.estimatedUsd, 0) + l.owed.filter((o) => o.address === a).reduce((s, o) => s + o.usd, 0),

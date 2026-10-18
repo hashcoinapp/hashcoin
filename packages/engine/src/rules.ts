@@ -53,6 +53,11 @@ export interface Rules {
      * an hour counts as half an hour).
      */
     fullCreditAt: number;
+    /**
+     * Keep what you earn (user, Oct 18): the bonus is scaled by the share of the last `keptDays` days'
+     * payouts the wallet hasn't sold (`keptShare`), so dumping earnings shrinks the bonus.
+     */
+    keptDays: number;
     /** Chest weight multiplier per miner level (0 = no bag: no bonus). */
     mult: Record<Level, number>;
   };
@@ -87,6 +92,7 @@ export const DEFAULT_RULES: Rules = {
   miner: {
     windowDays: 14,
     fullCreditAt: 0.8,
+    keptDays: 14,
     mult: { 0: 0, 1: 1, 2: 2, 3: 4 },
   },
   alpha: 0.5,

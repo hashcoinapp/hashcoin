@@ -79,6 +79,27 @@ export function computeMinerLevel(holderLevel: HolderLevel): Level {
   return holderLevel;
 }
 
+/** A wallet's $HASH flows over the last `rules.miner.keptDays` days, in tokens. */
+export interface WalletFlows {
+  /** Paid to it by the platform (mining, bonus, holder rewards). */
+  paid: number;
+  /** Sent out: sells, transfers, deposits. */
+  out: number;
+  /** Bought or received from anyone but the platform. */
+  in: number;
+}
+
+/**
+ * Keep what you earn (user, Oct 18): the share of recent payouts the wallet hasn't sold, 0 to 1.
+ * kept = 1 − (sent out − bought in) ÷ paid. Buying cancels selling; a wallet with no recent payouts
+ * counts as having kept everything. The miner bonus is scaled by it.
+ */
+export function keptShare(f: WalletFlows | undefined): number {
+  if (!f || !(f.paid > 0)) return 1;
+  const sold = Math.max(0, f.out - f.in);
+  return Math.min(1, Math.max(0, 1 - sold / f.paid));
+}
+
 /**
  * How much of a mining hour counts (hours are shown to miners) for one GPU: all of it at `fullCreditAt` (80%) or
  * more of the GPU's expected rate, less in proportion below. Measure over a full hour so share

@@ -9,10 +9,10 @@
 // - The miner bonus (chest), holder rewards and the dev share are paid from the harvested tax,
 //   which is already $HASH.
 import {
-  bonusMiningUsd, runEpoch, runHolderPayout, settle, splitTax,
+  bonusMiningUsd, keptShare, runEpoch, runHolderPayout, settle, splitTax,
   type EpochResult, type HolderPayoutResult, type PriceContext, type Rules, type TaxSplit,
 } from "@hashcoin/engine";
-import { addBig, day, type Ledger, type Owed, walletState } from "./ledger.js";
+import { addBig, day, type Ledger, type Owed, pruneFlows, walletFlows, walletState } from "./ledger.js";
 
 export interface SettlementRule {
   /** "sales": pay held-back mining from recorded coin sales; "estimate": at its estimate (devnet). */
@@ -79,12 +79,14 @@ export function planRound(x: RoundInput): RoundPlan {
   const earnings = new Map(Object.entries(l.minedSinceRound).filter(([, v]) => v > 0));
   const minedUsd = [...earnings.values()].reduce((a, v) => a + v, 0);
   const wallets = new Map([...earnings.keys()].map((a) => [a, walletState(a, l.wallets[a])]));
-  // Only miners with a bag earn the bonus, so the chest is sized on their mining alone.
-  const bonusMinedUsd = bonusMiningUsd({ earnings, wallets, price: x.levelPrice, now: x.now, rules: x.rules, excluded: x.excluded });
+  // Keep what you earn: the bonus is scaled by the share of recent payouts each miner hasn't sold.
+  const keptBy = new Map([...earnings.keys()].map((a) => [a, keptShare(walletFlows(l, a, x.now, x.rules.miner.keptDays))]));
+  // Only miners with a bag earn the bonus (scaled by what they kept), so the chest is sized on that.
+  const bonusMinedUsd = bonusMiningUsd({ earnings, wallets, price: x.levelPrice, now: x.now, rules: x.rules, excluded: x.excluded, kept: keptBy });
   const split = splitTax({ taxUsd, rate: x.rateBps / 10_000, minedUsd: bonusMinedUsd, chestCarryUsd: l.chestCarryUsd }, x.rules);
 
   const epoch = runEpoch({
-    epochId: x.roundId, now: x.now, earnings, wallets,
+    epochId: x.roundId, now: x.now, earnings, wallets, kept: keptBy,
     price: x.levelPrice, chestUsd: split.chestUsd + l.chestCarryUsd, floatAvailableUsd: Math.max(0, x.floatAvailableUsd),
     rules: x.rules, excluded: x.excluded,
   });
@@ -100,7 +102,9 @@ export function planRound(x: RoundInput): RoundPlan {
   for (const m of epoch.lines) {
     payouts.push({
       address: m.address, usd: m.payNowUsd, buyUsd: m.immediateUsd, kind: "miner",
-      why: m.level ? `level ${m.level}: mined ${usd(m.immediateUsd)} now of ${usd(m.miningUsd)} + bonus ${usd(m.chestUsd)}` : `no bag: mined ${usd(m.immediateUsd)} now of ${usd(m.miningUsd)}, no bonus`,
+      why: m.level
+        ? `level ${m.level}${m.kept < 1 ? `, kept ${Math.round(100 * m.kept)}%` : ""}: mined ${usd(m.immediateUsd)} now of ${usd(m.miningUsd)} + bonus ${usd(m.chestUsd)}`
+        : `no bag: mined ${usd(m.immediateUsd)} now of ${usd(m.miningUsd)}, no bonus`,
     });
   }
   for (const h of holders?.lines ?? []) {
@@ -185,6 +189,7 @@ export function stageRound(l: Ledger, plan: RoundPlan, x: { now: number; taxToke
   if (x.settlementMode === "sales") l.funding.saleBudgetUsd = Math.max(0, l.funding.saleBudgetUsd - plan.settledUsd);
   day(l, x.now).taxTokens += Number(x.taxTokens) / 10 ** x.decimals;
   day(l, x.now).bonusMinedUsd = (day(l, x.now).bonusMinedUsd ?? 0) + plan.bonusMinedUsd;
+  pruneFlows(l, x.now, 30);
   l.totals.taxTokens = addBig(l.totals.taxTokens, x.taxTokens);
   l.owed = plan.payouts.map((p, i) => {
     const funded = amounts[i];

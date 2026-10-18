@@ -6,11 +6,13 @@ export interface WeightInput {
   earningsUsd: number;
   /** Miner level 0-3 (0 = no bag, no bonus). */
   level: Level;
+  /** Share of recent payouts kept, 0 to 1 (`keptShare`); default 1. */
+  kept?: number;
 }
 
 export function weightOf(x: WeightInput, rules: Rules): number {
   if (x.earningsUsd <= 0 || x.level === 0) return 0;
-  return Math.pow(x.earningsUsd, rules.alpha) * rules.miner.mult[x.level];
+  return Math.pow(x.earningsUsd, rules.alpha) * rules.miner.mult[x.level] * Math.min(1, Math.max(0, x.kept ?? 1));
 }
 
 /** Each address's share of the pot: its weight over the total. No per-wallet cap (user, Oct 4). */
@@ -22,7 +24,7 @@ export function proportionalShares(weights: Map<string, number>): Map<string, nu
   return shares;
 }
 
-/** Miner chest shares: √(earnings) × miner level. Miners with no bag (level 0) get none. */
+/** Miner chest shares: √(earnings) × miner level × kept. Miners with no bag (level 0) get none. */
 export function chestShares(inputs: WeightInput[], rules: Rules): Map<string, number> {
   const weights = new Map<string, number>();
   for (const x of inputs) {

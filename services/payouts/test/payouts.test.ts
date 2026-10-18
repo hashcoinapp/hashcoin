@@ -11,7 +11,7 @@ import { engageKill, holdLoopLock, killReason, releaseKill } from "../src/contro
 import { resolveInFlight } from "../src/inflight.js";
 import { indexTransactions } from "../src/indexer.js";
 import { publicRecord } from "../src/publish.js";
-import { dayKey, emptyLedger, recordPrice } from "../src/ledger.js";
+import { dayKey, emptyLedger, recordPrice, walletFlows } from "../src/ledger.js";
 import { solUsd } from "../src/price.js";
 import { rateProposal } from "../src/proposal.js";
 import { decideRate } from "../src/rate.js";
@@ -231,6 +231,32 @@ describe("round", () => {
     const miner = plan.payouts.find((p) => p.address === MINER)!;
     expect(miner.usd).toBeCloseTo(0.75, 9);
     expect(miner.why).toMatch(/no bag/);
+  });
+
+  it("keep what you earn: the indexer tracks payouts, sells and buys; a miner who sold half its pay gets half the bonus weight", () => {
+    const l = ledgerWithHolderAndMiner();
+    indexTransactions(l, [
+      tx(t0 - HOUR_MS * 5, [TREASURY, -1_000], [MINER, 1_000]), // paid by us
+      tx(t0 - HOUR_MS * 4, [MINER, -500], [POOL, 500]),         // sold half
+    ], { price, rules: DEFAULT_RULES, platform });
+    const f = walletFlows(l, MINER, t0, 14);
+    expect(f.paid).toBeCloseTo(1_000);
+    expect(f.out).toBeCloseTo(500);
+    expect(f.in).toBeCloseTo(2_000); // the bag it bought two days ago
+    // Its buy covers the sale, so it still counts as having kept everything.
+    expect(planRound({ ...base, ledger: l, now: t0, taxTokens: T(200) }).epoch.lines.find((m) => m.address === MINER)!.kept).toBe(1);
+
+    const l2 = ledgerWithHolderAndMiner();
+    l2.flows = {}; // forget the bag purchase: only the payout and the sale count
+    indexTransactions(l2, [
+      tx(t0 - HOUR_MS * 5, [TREASURY, -1_000], [MINER, 1_000]),
+      tx(t0 - HOUR_MS * 4, [MINER, -500], [POOL, 500]),
+    ], { price, rules: DEFAULT_RULES, platform });
+    const plan = planRound({ ...base, ledger: l2, now: t0, taxTokens: T(200) });
+    const m = plan.epoch.lines.find((x) => x.address === MINER)!;
+    expect(m.kept).toBeCloseTo(0.5);
+    expect(plan.bonusMinedUsd).toBeCloseTo(0.5); // $1 mined × kept 50%
+    expect(plan.payouts.find((p) => p.address === MINER)!.why).toMatch(/kept 50%/);
   });
 
   it("a buy that can't happen (graduating) keeps the bonus in tokens, so a price crash before the retry can't inflate it", () => {
