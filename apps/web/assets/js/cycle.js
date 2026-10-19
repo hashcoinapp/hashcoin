@@ -277,9 +277,9 @@
   const NEXT_NEEDS = { 2: "$500+ bag", 3: "$2,500+ bag" };
   const B = (key) => bagRoot.querySelector(`[data-b="${key}"]`);
   const bagNums = (L) => {
-    const r = HM ? HM.miner({ myRev: gpu.rev, level: L }) : { mining: 14.91, chestShare: 13.76 * L };
+    const r = HM ? HM.miner({ myRev: gpu.rev, level: L, estimate: true }) : { mining: 14.91, chestShare: 13.76 * L };
     const bag = EXAMPLE_BAG[L - 1];
-    const h = HM ? HM.holder(bag, L) : { perDay: bag * 0.0088 * L, yieldPct: 0.88 * L };
+    const h = HM ? HM.holder(bag, L, { estimate: true }) : { perDay: bag * 0.0088 * L, yieldPct: 0.88 * L };
     return { r, bag, h, weekHold: 7 * h.perDay, weekGpu: 7 * (r.mining + r.chestShare) };
   };
   let bagLevel = 1, bagTop = false;

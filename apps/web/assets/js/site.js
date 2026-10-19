@@ -136,6 +136,14 @@
     });
   });
 
+  // Live mode: the stats strip's height comes off the hero, so both fit the first screen.
+  const stripEl = $(".stat-strip");
+  if (stripEl && CFG.mode === "live") {
+    const fitStrip = () => root.style.setProperty("--strip-h", stripEl.offsetHeight + "px");
+    fitStrip();
+    window.addEventListener("resize", fitStrip);
+  }
+
   // Live-mode preview (scripts/live-sample.js only): say plainly that the values are made up.
   if (CFG.preview) {
     const bar = document.createElement("p");

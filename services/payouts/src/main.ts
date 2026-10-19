@@ -113,6 +113,10 @@ async function collectTick() {
     const report = await runCollector(false);
     const wallets = walletsOf(report);
     for (const w of wallets) { credit(w.wallet, w.minedUsd); ledger.hoursInWindow[w.wallet] = w.hoursInWindow; }
+    // GPUs mining now, per wallet (a wallet can show up under more than one coin).
+    const gpus: Record<string, number> = {};
+    for (const w of wallets) gpus[w.wallet] = (gpus[w.wallet] ?? 0) + w.gpus.length;
+    ledger.miningNow = { at: now, gpus };
     // What was credited, per coin, waits to be sold (`ctl sold` trues held-back mining up to the sale).
     for (const [coin, c] of Object.entries(report)) {
       const ws = (c as { wallets?: { minedCoins: number; minedUsd: number }[] } | null)?.wallets;
@@ -135,6 +139,9 @@ async function collectTick() {
   lastCollect = now;
   for (const m of cfg.simulate?.miners ?? []) {
     credit(m.wallet, m.usdPerHour * hours);
+    const now_ = (ledger.miningNow ??= { at: now, gpus: {} });
+    now_.at = now;
+    now_.gpus[m.wallet] = Math.max(now_.gpus[m.wallet] ?? 0, 1);
     ledger.hoursInWindow[m.wallet] = Math.max(ledger.hoursInWindow[m.wallet] ?? 0, 1);
     // As if mined in PRL at the assumed price, so `ctl sold` can be rehearsed.
     const u = (ledger.funding.unsold.PRL ??= { coins: 0, usd: 0 });

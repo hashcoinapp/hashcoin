@@ -84,6 +84,16 @@
 </header>
 <main id="main">
 
+  <!-- LIVE STATS (live mode): from the payout loop's public record, every minute -->
+  <section class="stat-strip" data-mode="live" aria-label="$HASH now">
+    <dl class="wrap strip">
+      <div><dt>Market cap</dt><dd data-st="mcap">—</dd></div>
+      <div><dt>Mining now</dt><dd data-st="miners">—</dd></div>
+      <div><dt>Ready to pay out</dt><dd data-st="ready">—</dd></div>
+      <div><dt>Paid out so far</dt><dd><span data-st="paid">—</span> <small data-st="paid-tokens"></small></dd></div>
+    </dl>
+  </section>
+
   <!-- HERO -->
   <section class="hero" aria-labelledby="hero-title">
     <div class="wrap hero-split">
@@ -336,7 +346,7 @@
               <p class="both-note">Mined $HASH lands in your bag, so it counts toward your level and earns holder rewards too. Sell it and your bag counts 3× less, so your bonus drops too.</p>
             </div>
           </div>
-          <p class="xfoot">Estimate at launch-week trading, not a promise. <a href="#math">The math</a> · <a href="calculator.html">Full calculator</a><span data-mode="live"> · <a href="#launch">What was actually paid</a></span></p>
+          <p class="xfoot"><span id="earn-basis">Estimate at launch-week trading, not a promise.</span> <a href="#math">The math</a> · <a href="calculator.html">Full calculator</a><span data-mode="live"> · <a href="#launch">What was actually paid</a></span></p>
         </div>
       </div>
 

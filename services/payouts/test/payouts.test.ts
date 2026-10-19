@@ -10,7 +10,7 @@ import { checkRuntime, type PayoutsConfig, REPO_ROOT } from "../src/config.js";
 import { engageKill, holdLoopLock, killReason, releaseKill } from "../src/control.js";
 import { resolveInFlight } from "../src/inflight.js";
 import { indexTransactions } from "../src/indexer.js";
-import { publicRecord } from "../src/publish.js";
+import { liveRates, publicRecord, type RoundSummary } from "../src/publish.js";
 import { dayKey, emptyLedger, recordPrice } from "../src/ledger.js";
 import { solUsd } from "../src/price.js";
 import { rateProposal } from "../src/proposal.js";
@@ -556,5 +556,70 @@ describe("a market buy that can't be measured", () => {
       expect(parts[1]!.total).toBe(T(80)); // tax-funded payouts go out as usual
     }
     expect(payoutParts(owed, T(20), (usd) => T(usd * 40))[0]!.total).toBe(T(20));
+  });
+});
+
+describe("live numbers for the website (public record)", () => {
+  const round = (at: number, chestUsd: number, holderUsd: number, minedUsd: number): RoundSummary => ({
+    round: 1, at: new Date(at).toISOString(), rateBps: 500, taxUsd: chestUsd + holderUsd + 1, minedUsd,
+    split: { devUsd: 1, chestUsd, holderUsd }, miners: 1, holders: 1, paidTokens: 0, transactions: [],
+  });
+  const rec = (l: ReturnType<typeof fresh>, now: number, rounds: RoundSummary[] = []) =>
+    publicRecord(l, { now, price, rules: DEFAULT_RULES, excluded: platform, explorer: (s) => s, rate: { bps: 500 }, rounds });
+
+  it("turns the last 24 hours of rounds into per-day payout rates", () => {
+    // Three rounds 10 minutes apart cover 30 minutes: ×48 to a day.
+    const rounds = [round(t0 - 20 * 60_000, 2, 1, 0.5), round(t0 - 10 * 60_000, 2, 1, 0.5), round(t0, 2, 1, 0.5), round(t0 - 2 * 24 * HOUR_MS, 99, 99, 99)];
+    const r = liveRates({
+      now: t0, rounds, rules: DEFAULT_RULES,
+      gpus: { [MINER]: 2, [BOB]: 1, [ALICE]: 1 },
+      wallets: { [MINER]: { holderLevel: 2, qualifiedUsd: 600 }, [BOB]: { holderLevel: 0, qualifiedUsd: 10 }, [ALICE]: { holderLevel: 3, qualifiedUsd: 3000 } },
+    })!;
+    expect(r.hours).toBeCloseTo(0.5);
+    expect(r.minerBonusUsdDay).toBeCloseTo(6 * 48);
+    expect(r.holderUsdDay).toBeCloseTo(3 * 48);
+    expect(r.gpus).toBe(4);
+    expect(r.minedUsdPerGpuDay).toBeCloseTo((1.5 * 48) / 4); // $18 a GPU a day
+    expect(r.bagShare).toBeCloseTo(3 / 4);
+    // Miner weight: 2 GPUs × 2 (Level 2) + 1 GPU × 4 (Level 3) = 8, each at √$18.
+    expect(r.avgMinerMult).toBeCloseTo(8 / 3);
+    expect(r.bonusPerSqrtUsdDay).toBeCloseTo(288 / (Math.sqrt(18) * 8));
+    // Holder weight: $600 × 2 + $3,000 × 4 = $13,200; Bob's $10 has no level.
+    expect(r.holderPerWeightedUsdDay).toBeCloseTo(144 / 13_200);
+    // A GPU like the average one at Level 2 gets mining × (bonus ÷ mining) back in bonus.
+    expect(r.bonusPerSqrtUsdDay! * Math.sqrt(18) * 2).toBeCloseTo(288 * (2 / 8));
+  });
+
+  it("has no rates before two rounds, and no bonus rate without miners", () => {
+    expect(liveRates({ now: t0, rounds: [round(t0, 1, 1, 1)], rules: DEFAULT_RULES, gpus: {}, wallets: {} })).toBeNull();
+    const r = liveRates({ now: t0, rounds: [round(t0 - 600_000, 1, 1, 0), round(t0, 1, 1, 0)], rules: DEFAULT_RULES, gpus: null, wallets: { [ALICE]: { holderLevel: 1, qualifiedUsd: 100 } } })!;
+    expect(r.gpus).toBeNull();
+    expect(r.bonusPerSqrtUsdDay).toBeNull();
+    expect(r.holderPerWeightedUsdDay).toBeCloseTo((2 * 72) / 100);
+  });
+
+  it("publishes market cap, miners now, the pot waiting and what was paid out in USD", () => {
+    const l = fresh();
+    l.taxUnallocated = T(1_000).toString(); // $50 at $0.05
+    l.chestCarryUsd = 2;
+    l.holderCarryUsd = 3;
+    l.miningNow = { at: t0 - HOUR_MS, gpus: { [MINER]: 2, [BOB]: 1, [DEV]: 1 } };
+    const owed = [
+      { address: MINER, usd: 3, buyUsd: 1, kind: "miner" as const, why: "" },
+      { address: ALICE, usd: 2, kind: "holder" as const, why: "" },
+      { address: DEV, usd: 1, kind: "dev" as const, why: "" },
+    ];
+    l.owed.push(...owed);
+    for (const o of owed) recordSent(l, o, T(10), { now: t0, decimals: 6 });
+    const r = rec(l, t0);
+    expect(r.supplyTokens).toBe(21_000_000);
+    expect(r.marketCapUsd).toBeCloseTo(1_050_000);
+    expect(r.readyToPayUsd).toBeCloseTo(55);
+    expect(r.miners).toMatchObject({ gpus: 3, wallets: 2 }); // the dev wallet isn't counted
+    expect(r.paidUsd).toEqual({ miners: 3, holders: 2, total: 5 });
+    // A collector that hasn't run for over 2 hours: no miner count rather than an old one.
+    expect(rec(l, t0 + 2 * HOUR_MS).miners).toBeNull();
+    // Older ledgers have only the token totals.
+    expect(rec(fresh(), t0).paidUsd).toBeNull();
   });
 });

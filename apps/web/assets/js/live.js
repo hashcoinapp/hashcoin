@@ -1,11 +1,13 @@
-// Home page, live mode: the payout loop's public record (<api>/v1/stats, services/payouts/src/publish.ts):
-// the tax now and its split, the last 24 hours, what each level was paid, recent payouts with Solscan
-// links, and where trading is (launch curve or the DAMM v2 pool). Refreshes every minute while visible.
+// Live mode: the payout loop's public record (<api>/v1/stats, services/payouts/src/publish.ts), every
+// minute while the page is visible. Fills the home page's stats strip (market cap, mining now, ready to
+// pay out, paid out so far) and Live tab (the tax now and its split, the last 24 hours, what each level
+// was paid, recent payouts with Solscan links, launch curve or DAMM v2 pool), and gives the last 24
+// hours' payout rates to the earnings calculators (HashModel.setLive, then an "hc:stats" event).
 (function () {
   "use strict";
   const CFG = window.HASHCOIN || {};
+  if (CFG.mode !== "live") return;
   const box = document.querySelector("[data-stats]");
-  if (CFG.mode !== "live" || !box) return;
   const $ = (s) => box.querySelector(s);
   const F = window.hcFmt;
   const S = (k) => $(`[data-s="${k}"]`);
@@ -24,14 +26,39 @@
     }
   }
 
+  // The strip: four numbers, each kept on one line; "—" until there's a value.
+  const tokensShort = (n) => n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 1 : 2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1) + "K" : count(n);
+  function strip(st) {
+    const set = (k, v) => document.querySelectorAll(`[data-st="${k}"]`).forEach((el) => (el.textContent = v));
+    if (!st) return;
+    set("mcap", st.marketCapUsd ? F.usd(st.marketCapUsd) : "—");
+    set("miners", st.miners ? `${count(st.miners.gpus)} GPU${st.miners.gpus === 1 ? "" : "s"}` : "—");
+    set("ready", st.readyToPayUsd != null ? F.usd(st.readyToPayUsd) : "—");
+    const t = st.totals || {};
+    const paidTokens = (t.paidToMinersTokens || 0) + (t.paidToHoldersTokens || 0);
+    set("paid", st.paidUsd ? F.usd(st.paidUsd.total) : st.priceUsd ? F.usd(paidTokens * st.priceUsd) : "—");
+    set("paid-tokens", paidTokens ? tokensShort(paidTokens) + " $HASH" : "");
+  }
+
+  // The calculators: the last 24 hours' rates, or the pre-launch estimate when there are none.
+  function share(st) {
+    if (window.HashModel && window.HashModel.setLive) window.HashModel.setLive(st && st.calc, st && st.updatedAt);
+    document.dispatchEvent(new CustomEvent("hc:stats", { detail: st }));
+  }
+
   // No numbers: say why, keep the Solscan way to check, and leave the panel's dashes.
   function fallback(why) {
+    share(null);
+    if (!box) return;
     S("updated").textContent = "Not answering";
     box.classList.add("is-down");
     note(why, "The token on Solscan");
   }
 
   function render(st) {
+    strip(st);
+    share(st);
+    if (!box) return;
     box.classList.remove("is-down");
     const ageMin = Math.max(0, Math.round((Date.now() - Date.parse(st.updatedAt)) / 60000));
     S("updated").textContent = ageMin < 1 ? "Updated just now" : ageMin < 120 ? `Updated ${ageMin} min ago` : `Updated ${time(st.updatedAt)}`;

@@ -86,7 +86,8 @@
   <section class="page-head">
     <div class="wrap">
       <h1>What would you make?</h1>
-      <p class="lede">One <span data-mode="prelaunch">pre-launch </span>estimate for mining and holding, based on <b>daily volume per GPU mining.</b> Mining revenue per card is real (hashrate.no, Oct 14, 2026). Change the inputs if you think the ratio will be higher or lower.</p>
+      <p class="lede" data-mode="prelaunch">One pre-launch estimate for mining and holding, based on <b>daily volume per GPU mining.</b> Mining revenue per card is real (hashrate.no, Oct 14, 2026). Change the inputs if you think the ratio will be higher or lower.</p>
+      <p class="lede" data-mode="live">What you'd make at <b>the last 24 hours' payouts</b>, or with your own estimate. Mining revenue per card is from hashrate.no (Oct 14, 2026).</p>
     </div>
   </section>
 
@@ -133,7 +134,7 @@
           </div>
         </fieldset>
 
-        <fieldset class="fieldset">
+        <fieldset class="fieldset" id="fc-est">
           <legend>Estimate inputs</legend>
           <p class="scenario-desc">The estimate uses one market number: <b>daily volume per GPU mining.</b> Default $750 = 30% daily volume/mcap × $1,000 mcap per holder ÷ 40% of holders mining (launch-week trading). <a class="gold" href="index.html#math">See the math</a></p>
           <div class="range-row">
@@ -165,8 +166,15 @@
 
       <div class="card calc-out" aria-live="polite" aria-atomic="false">
         <div class="calc-out-head">
-          <h2 style="font-size: 1.3rem;">Your estimate</h2>
-          <span class="label-example">Estimate, not a promise</span>
+          <h2 style="font-size: 1.3rem;" id="fc-title">Your estimate</h2>
+          <span class="label-example" id="fc-label">Estimate, not a promise</span>
+        </div>
+        <div class="field basis" data-mode="live">
+          <div class="seg" id="fc-basis" role="group" aria-label="Based on">
+            <button type="button" data-b="live" aria-pressed="true">Last 24h payouts</button>
+            <button type="button" data-b="estimate" aria-pressed="false">Your estimate</button>
+          </div>
+          <p class="range-hint" id="fc-basis-hint"></p>
         </div>
         <div class="results-wrap">
           <table class="results five">
@@ -224,5 +232,6 @@
 <script src="assets/js/model.js"></script>
 <script src="assets/js/site.js"></script>
 <script src="assets/js/calculator.js"></script>
+<script src="assets/js/live.js"></script>
 </body>
 </html>

@@ -17,6 +17,13 @@ Every round is written to the ledger as "owed" before the first transfer and cle
 
 Written after every round (`src/publish.ts`): price, market and funding, tax rate and changes, totals, `last24h` / `last7d` (traded, mined, tax, paid), carries, the last 50 rounds with their transactions, and each wallet's levels and pay (`/v1/wallet/:address`). `levels24h` is the site's "paid in the last 24h, per level" table: `{ "1": { wallets, paidUsd }, "2": ..., "3": ... }`, the wallets of each holder level paid a miner bonus or holder reward today (UTC, like `last24h`) and the USD they received, valued when the payout was planned (a retry keeps its value). Bought mining, held-back mining and the dev share aren't counted: they don't depend on the level. The tally (`levelPaid` in the ledger, today only) is booked in `recordSent`, in the same save that clears the payout, so a crash can't count a payout twice. It is `null` until a level 1+ wallet has been paid by a loop that keeps it (ledgers before Oct 18), and the site then hides the table.
 
+For the site's live mode (Oct 19) the record also has:
+- `marketCapUsd` (price × `supplyTokens`, all 21M, the way charts show a fixed-supply token).
+- `miners`: `{ gpus, wallets, at }` mining at the last collector run (`miningNow` in the ledger, written by each collector tick); `null` if the collector hasn't run in 2 hours.
+- `readyToPayUsd`: tax collected and not yet paid out: harvested but not yet split, plus the bonus and holder pots carried to the next round.
+- `paidUsd`: `{ miners, holders, total }`, miner and holder payouts all time in USD when planned (`totals.minerUsd` / `holderUsd`, booked in `recordSent`); `null` on ledgers from before Oct 19.
+- `calc`: the last 24 hours' payout rates for the site's calculators (`liveRates`): from the rounds of the last 24 hours (rolling, scaled to a day when fewer), the GPUs mining now and today's bags. `bonusPerSqrtUsdDay` × √(a GPU's $/day) × level weight (1/2/4) is a miner's bonus a day; `holderPerWeightedUsdDay` × qualified bag × level weight is a holder's rewards a day. Each GPU's weight uses the average GPU's mining (as the site's estimate does). `null` before two rounds; a rate is `null` with nothing to divide by, and the site then shows its pre-launch estimate.
+
 On the PC the loop runs as the startup task "Hashcoin Payouts" (`infra/pc/payouts-autostart.ps1`, `run-payouts.ps1`, `stop-payouts.ps1`; `docs/HOSTING.md`), logging to `loop.log` in the data folder.
 
 ## Run

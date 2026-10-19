@@ -162,6 +162,12 @@
     cards.forEach((c) => c.setAttribute("aria-checked", String(+c.dataset.lv === L)));
     cards.forEach((c) => (c.tabIndex = +c.dataset.lv === L ? 0 : -1));
 
+    // Live mode: the last 24 hours' payouts once the API has them; the launch-week estimate until then.
+    const LV = M.live();
+    $("#earn-basis").textContent = LV
+      ? `Based on the last ${LV.hours >= 23 ? "24 hours" : Math.floor(LV.hours) + (LV.hours < 2 ? " hour" : " hours")} of payouts, not a promise.`
+      : "Estimate at launch-week trading, not a promise.";
+
     // If you mine: the bonus comes with the bag (one ladder); without one, mining is still paid.
     $("#mine-needs").textContent = ["Bonus needs $50 held", "Bonus needs $500 held", "Bonus needs $2,500 held"][L - 1];
     const r = M.miner({ myRev: g.rev, level: L });
@@ -198,9 +204,10 @@
     $("#lvm-note").textContent = g.name;
 
     // The math, plugged in
-    const mk = r.mk;
+    const mk = M.market();
     const pl = Math.max(1, hl);
-    const hb = M.holder(S.bag, pl);
+    const hb = M.holder(S.bag, pl, { estimate: true });
+    const re = M.miner({ myRev: g.rev, level: L, estimate: true });
     $("#plug-gpu").textContent = `${g.name} · Level ${L} · ${whole(S.bag)} bag`;
     $("#plug-eq").innerHTML =
       `tax rate    = ${pct2(mk.rate)} (lowest that lifts miners to 5× and keeps holders at 1%+)\n` +
@@ -209,15 +216,17 @@
       `chest ÷ N   = 4 × $${n2(E.avgRev)} × ${Math.round(100 * mk.bonusShare)}% with a bag, within 45–75% of the tax = $${n2(mk.chestPerGpu)}\n` +
       `holders ÷ N = $${n2(mk.tax)} − $${n2(mk.devPerGpu)} − $${n2(mk.chestPerGpu)} = $${n2(mk.holderPerGpu)}\n\n` +
       `your cut    = $${n2(mk.chestPerGpu)} ÷ ${Math.round(100 * mk.bonusShare)}% × √${n2(g.rev)} × ${M.MULT[L - 1]} ÷ (√${n2(E.avgRev)} × ${mk.avgMult.toFixed(1)})\n` +
-      `            = <b>${money(r.chestShare)}/day</b> + mining ${money(r.mining)} = <b>${money(r.total)}/day</b>\n\n` +
+      `            = <b>${money(re.chestShare)}/day</b> + mining ${money(re.mining)} = <b>${money(re.total)}/day</b>\n\n` +
       `your bag    = ${whole(S.bag)} × ${(100 * mk.yieldPerDay[pl - 1]).toFixed(2)}% a day (Level ${pl})\n` +
       `            = <b>${money(hb.perDay)}/day</b>`;
     $("#plug-note").textContent =
       `Below $${Math.round(mk.targetVolPerGpu)} per GPU even a 5% tax can't lift miners to 5×; above it the tax falls as trading gets busier, never leaving holders under 1% of volume. ` +
       `$${E.volPerGpu} is launch-week trading; later it's usually lower. ` +
-      (document.documentElement.dataset.mode === "live" ? "What each level was actually paid is under Live." : "After launch this is replaced by what each level was actually paid.");
+      (document.documentElement.dataset.mode !== "live" ? "After launch this is replaced by what each level was actually paid." :
+       M.live() ? "The earnings above use the last 24 hours' actual payouts instead." : "What each level was actually paid is under Live.");
   }
   render();
+  document.addEventListener("hc:stats", render);
 
   // ---------- How it works: the split balances itself ----------
   const bal = $("#bal-vol");

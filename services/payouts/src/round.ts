@@ -205,8 +205,9 @@ export function recordSent(l: Ledger, entry: Owed, amount: bigint, x: { now: num
   if (entry.kind === "dev") { l.totals.devTokens = addBig(l.totals.devTokens, amount); return; }
   tallyLevel(l, entry, amount, x.now);
   const w = (l.paid[entry.address] ??= { miner: "0", holder: "0" });
-  if (entry.kind === "holder") { w.holder = addBig(w.holder, amount); l.totals.holderTokens = addBig(l.totals.holderTokens, amount); }
-  else { w.miner = addBig(w.miner, amount); l.totals.minerTokens = addBig(l.totals.minerTokens, amount); }
+  const usd = amount > 0n && entry.usd > 0 ? entry.usd : 0;
+  if (entry.kind === "holder") { w.holder = addBig(w.holder, amount); l.totals.holderTokens = addBig(l.totals.holderTokens, amount); l.totals.holderUsd = (l.totals.holderUsd ?? 0) + usd; }
+  else { w.miner = addBig(w.miner, amount); l.totals.minerTokens = addBig(l.totals.minerTokens, amount); l.totals.minerUsd = (l.totals.minerUsd ?? 0) + usd; }
 }
 
 /**

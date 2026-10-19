@@ -80,10 +80,29 @@ window.HashModel = (function () {
     };
   }
 
+  // Live mode: the last 24 hours' payout rates from the API (publish.ts liveRates), set by live.js.
+  // Used instead of the estimate when both rates exist and cover at least an hour of rounds; pass
+  // { estimate: true } to get the estimate anyway (the calculator's "Estimate" view).
+  let LIVE = null;
+  function setLive(calc, updatedAt) {
+    LIVE = calc && calc.hours >= 1 && calc.bonusPerSqrtUsdDay != null && calc.holderPerWeightedUsdDay != null ? { ...calc, updatedAt } : null;
+  }
+  const live = (x) => (LIVE && !x.estimate ? LIVE : null);
+
   // Miner: cut = chest per GPU with a bag × √(your GPU) × level ÷ (√a × their average level).
   // Level 0 (no bag): mining is paid, no bonus. x: { myRev, level 0-3, watts?, elec?, ...market inputs }
+  // Live: cut = the last 24h's bonus per √($/day) × level weight × √(your GPU) × level.
   function miner(x) {
     const mk = market(x);
+    const L = live(x);
+    if (L) {
+      const sq = Math.sqrt(Math.max(0, x.myRev)), m = x.level > 0 ? MULT[x.level - 1] : 0;
+      const chestShare = L.bonusPerSqrtUsdDay * sq * m;
+      const rel = m && L.minedUsdPerGpuDay > 0 && L.avgMinerMult > 0 ? (sq * m) / (Math.sqrt(L.minedUsdPerGpuDay) * L.avgMinerMult) : 0;
+      const total = x.myRev + chestShare;
+      const power = x.watts != null && x.elec != null ? (x.watts * 24 / 1000) * x.elec : 0;
+      return { mk, live: L, rel, chestShare, mining: x.myRev, total, power, net: total - power, mult: x.myRev > 0 ? total / x.myRev : 0 };
+    }
     const rel = x.level > 0 && mk.bonusShare > 0 ? (Math.sqrt(Math.max(0, x.myRev)) * MULT[x.level - 1]) / (Math.sqrt(mk.avgRev) * mk.avgMult) : 0;
     const chestShare = mk.bonusShare > 0 ? (mk.chestPerGpu / mk.bonusShare) * rel : 0;
     const total = x.myRev + chestShare;
@@ -94,6 +113,11 @@ window.HashModel = (function () {
   // Holder: bag × daily yield for that holder level.
   function holder(bagUsd, level, x = {}) {
     const mk = market(x);
+    const L = live(x);
+    if (L) {
+      const y = level > 0 ? L.holderPerWeightedUsdDay * MULT[level - 1] : 0;
+      return { mk, live: L, perDay: bagUsd * y, yieldPct: 100 * y };
+    }
     const perDay = level > 0 ? bagUsd * mk.yieldPerDay[level - 1] : 0;
     return { mk, perDay, yieldPct: level > 0 ? 100 * mk.yieldPerDay[level - 1] : 0 };
   }
@@ -101,5 +125,5 @@ window.HashModel = (function () {
   // Highest level a (qualified) bag reaches.
   const holderLevelFor = (bagUsd) => (bagUsd >= HOLDER.usd[2] ? 3 : bagUsd >= HOLDER.usd[1] ? 2 : bagUsd >= HOLDER.usd[0] ? 1 : 0);
 
-  return { TARGET, RATE, SHARE, HOLDER_MIN_OF_VOLUME, devShareAt, minerMaxAt, rateFor, MULT, HOLDER, ESTIMATE, market, miner, holder, holderLevelFor };
+  return { TARGET, RATE, SHARE, HOLDER_MIN_OF_VOLUME, devShareAt, minerMaxAt, rateFor, MULT, HOLDER, ESTIMATE, market, miner, holder, holderLevelFor, setLive, live: () => LIVE };
 })();

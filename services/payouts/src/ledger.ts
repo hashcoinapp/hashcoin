@@ -132,7 +132,13 @@ export interface Ledger {
   /** `proposed`: sent to the multisig for signing rather than sent by us. */
   rateChanges: { at: number; bps: number; effectiveEpoch?: number; reason: string; signature?: string; proposed?: string }[];
   paid: Record<string, { miner: string; holder: string }>;
-  totals: { minerTokens: string; holderTokens: string; devTokens: string; taxTokens: string; volumeTokens: string };
+  /**
+   * USD fields: what miner and holder payouts were worth when planned, all time (the public "paid
+   * out" total). Missing in ledgers before Oct 19, which only have the token totals.
+   */
+  totals: { minerTokens: string; holderTokens: string; devTokens: string; taxTokens: string; volumeTokens: string; minerUsd?: number; holderUsd?: number };
+  /** GPUs mining at the last collector run, per wallet (the public "miners" count and the live calculator). */
+  miningNow?: { at: number; gpus: Record<string, number> };
 }
 
 export function emptyLedger(network: string, mint: string): Ledger {
