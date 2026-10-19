@@ -28,6 +28,13 @@
   const onScroll = () => header && header.classList.toggle("scrolled", window.scrollY > 8);
   window.addEventListener("scroll", onScroll, { passive: true });
   onScroll();
+  // Home page: the header's gold button stays quiet while the hero's own buttons are on screen.
+  const heroCtas = $$(".home .hero .hero-ctas").find((el) => el.offsetParent);
+  if (header && heroCtas && "IntersectionObserver" in window) {
+    new IntersectionObserver((en) => header.classList.toggle("past-hero", !en[0].isIntersecting && en[0].boundingClientRect.top < 0)).observe(heroCtas);
+  } else if (header) {
+    header.classList.add("past-hero");
+  }
 
   // ---------- Light / dark ----------
   // Dark by default; the head script applies a stored "light" before paint.
@@ -35,7 +42,7 @@
   const showTheme = () => {
     const light = root.dataset.theme === "light";
     $$(".theme-btn").forEach((b) => b.setAttribute("aria-label", light ? "Switch to dark mode" : "Switch to light mode"));
-    if (themeMeta) themeMeta.content = light ? "#F4F5F7" : "#0B0C0D";
+    if (themeMeta) themeMeta.content = light ? "#FAFAF9" : "#0E0F11";
   };
   $$(".theme-btn").forEach((b) => b.addEventListener("click", () => {
     const light = root.dataset.theme !== "light";
@@ -136,14 +143,6 @@
     });
   });
 
-  // Live mode, big screens: the stats band sits above the hero; its height comes off the hero's.
-  const stripEl = $(".live-band");
-  if (stripEl && CFG.mode === "live") {
-    const fitStrip = () => root.style.setProperty("--band-h", (innerWidth >= 1180 ? stripEl.offsetHeight : 0) + "px");
-    fitStrip();
-    window.addEventListener("resize", fitStrip);
-  }
-
   // Live-mode preview (scripts/live-sample.js only): say plainly that the values are made up.
   if (CFG.preview) {
     const bar = document.createElement("p");
@@ -159,6 +158,7 @@
     $$("[data-download]").forEach((a) => {
       a.href = dl.url;
       a.removeAttribute("data-soon");
+      a.removeAttribute("title");
     });
     $$("[data-download-soon], [data-download-none]").forEach((el) => el.remove());
     $$("[data-download-version]").forEach((el) => (el.textContent = dl.version || ""));
@@ -175,7 +175,9 @@
     toast(el.dataset.soon || "Coming soon.");
   });
 
-  // ---------- Countdown ----------
+  // ---------- Countdown (pre-launch hero) ----------
+  // Ticks to config.js launchAt, shown in US Eastern time; at zero it says "Launching now" until
+  // go_live.mjs switches the site to live mode.
   const cd = $("[data-countdown]");
   if (cd) {
     const target = CFG.launchAt ? Date.parse(CFG.launchAt) : NaN;
@@ -183,19 +185,31 @@
     const status = $("[data-countdown-status]");
     const pad = (n) => String(n).padStart(2, "0");
     if (!isNaN(target)) {
-      cd.classList.add("set");
-      if (status) {
-        status.textContent = "Launch: " + new Date(target).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+      let when;
+      try {
+        when = new Date(target).toLocaleString("en-US", { timeZone: "America/New_York", weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+      } catch (e) {
+        when = new Date(target).toUTCString();
       }
+      when = when.replace(/:00 /, " ").replace(" AM", " am").replace(" PM", " pm");
+      cd.hidden = false;
+      let timer = 0;
       const tick = () => {
         let left = Math.max(0, Math.floor((target - Date.now()) / 1000));
+        if (!left) {
+          cd.hidden = true;
+          if (status) status.innerHTML = "<b>Launching now.</b> The contract address goes up here first.";
+          clearInterval(timer);
+          return;
+        }
         const d = Math.floor(left / 86400); left -= d * 86400;
         const h = Math.floor(left / 3600); left -= h * 3600;
         const m = Math.floor(left / 60); const s = left - m * 60;
         units.d.textContent = pad(d); units.h.textContent = pad(h); units.m.textContent = pad(m); units.s.textContent = pad(s);
       };
+      if (status) status.textContent = `Launch: ${when}. The contract address goes up here first.`;
       tick();
-      setInterval(tick, 1000);
+      timer = setInterval(tick, 1000);
     }
   }
 

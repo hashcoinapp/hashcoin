@@ -57,4 +57,9 @@
       .map((r) => ({ ...r, paidTokens: (r.split.chestUsd + r.minedUsd * 0.75 + (r.holders ? 156 : 0)) / PRICE })),
     wallets: 2310,
   };
+  // Sign in (account.js): any address shows this sample account.
+  window.HASHCOIN_SAMPLE_WALLET = {
+    priceUsd: PRICE, balanceTokens: 25500, balanceUsd: 25500 * PRICE, holderLevel: 2, minerLevel: 2, hoursMinedInWindow: 30,
+    qualifiedUsd: 25500 * PRICE, usdToNextLevel: 2500 - 25500 * PRICE, paidTokens: { miner: 3100, holder: 410 }, pendingUsd: 1.84,
+  };
 })();

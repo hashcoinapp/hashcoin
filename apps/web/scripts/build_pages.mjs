@@ -57,7 +57,8 @@ const values = {
   wallets: (cfg.wallets ?? []).map((w) => `  - ${w.label}${w.note ? ` (${w.note})` : ""}: ${w.address}`).join("\n"),
 };
 function renderMode(file) {
-  let t = readFileSync(join(WEB, file), "utf8");
+  // A Windows checkout may have CRLF line endings; the blocks are matched on LF.
+  let t = readFileSync(join(WEB, file), "utf8").replace(/\r\n/g, "\n");
   t = t.replace(/^<!-- Mode blocks:.*-->\n/m, "");
   const [keep, drop] = live ? ["live", "prelaunch"] : ["prelaunch", "live"];
   // Blocks on lines of their own first (their line breaks go too), then ones inside a line.

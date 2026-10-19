@@ -11,12 +11,13 @@ window.HASHCOIN = Object.assign({
   site: "https://hashcoin.app",
   // The API (services/api on the backend PC, reached through the Cloudflare Tunnel).
   api: "https://api.hashcoin.app",
-  // ISO 8601 launch time, e.g. "2026-12-01T17:00:00Z". null shows "to be announced".
-  launchAt: "2026-10-24T17:00:00Z", // Sat Oct 24, 1 pm EDT (user, Oct 19)
+  // ISO 8601 launch time. The pre-launch hero counts down to it. Saturday Oct 24, 2026, 1:00 pm US
+  // Eastern (EDT, so 17:00 UTC; user, Oct 19: "1pm est 10/24 i think"). null hides the countdown.
+  launchAt: "2026-10-24T17:00:00Z",
   // Token contract address. Published on this site first, at launch. Never before.
   ca: null,
-  // true opens the waitlist form (it posts to <api>/v1/waitlist). Turn it on once the API answers
-  // at <api>/v1/health. false shows "coming soon" and collects nothing.
+  // The waitlist form (it posts to <api>/v1/waitlist). The redesign (Oct 19) has no waitlist on the
+  // site; the setting only matters if a page has a [data-waitlist] form.
   waitlist: true,
   // The Windows installer, from the GitHub release. null shows "coming soon".
   // { url: "https://github.com/<owner>/<repo>/releases/download/desktop-v0.1.0/HashcoinMiner-0.1.0-setup.exe",

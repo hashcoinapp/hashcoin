@@ -44,7 +44,7 @@ def build(name: str) -> str:
         return f'{attr}="{data_uri(WEB / path)}"'
 
     html = re.sub(r'(src|data-logo|href)="(brand/logo/[^"]+\.(?:svg|ico))"', inline_asset, html)
-    html = re.sub(r'(src)="(assets/img/[^"]+\.jpg)"', inline_asset, html)
+    html = re.sub(r'(src|href)="(assets/img/[^"]+\.(?:jpg|png))"', inline_asset, html)
     return html
 
 
