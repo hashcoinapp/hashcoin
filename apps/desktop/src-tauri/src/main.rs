@@ -146,6 +146,18 @@ fn key_ring() -> KeyRing {
     ring
 }
 
+/// The tray icon: the `.ico` entry drawn for the tray's own size (16 px at 100% scaling, 20 or 24
+/// at 125–150%), so Windows doesn't shrink the 32 px window icon and blur the hash.
+fn tray_icon(app: &AppHandle) -> tauri::image::Image<'static> {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXSMICON};
+        let size = match unsafe { GetSystemMetrics(SM_CXSMICON) } { n if n > 0 => n as u32, _ => 16 };
+        if let Ok(icon) = tauri::image::Image::from_app_icon_resource(size) { return icon; }
+    }
+    app.default_window_icon().expect("app icon").clone().to_owned()
+}
+
 fn show_window(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") { let _ = w.show(); let _ = w.unminimize(); let _ = w.set_focus(); }
 }
@@ -398,7 +410,7 @@ fn main() {
             let menu = Menu::with_items(app, &[&open, &start, &stop, &quit])?;
             let tray_rt = shared.clone();
             TrayIconBuilder::new()
-                .icon(app.default_window_icon().cloned().expect("app icon"))
+                .icon(tray_icon(app.handle()))
                 .tooltip("Hashcoin Miner")
                 .menu(&menu)
                 .on_menu_event(move |app, ev| match ev.id().as_ref() {

@@ -97,6 +97,23 @@ antivirus installed, Defender steps back to passive. Everything below works whic
 - **The app never changes any antivirus**, never offers to, adds no exclusions and never asks for admin.
   Verification is unchanged.
 
+## First run
+While no wallet is saved (a fresh install), the window shows a short welcome instead of the main screen:
+welcome → "What's your Solana address?" (checked as you type; a pasted seed phrase or private key is cleared at once
+and never saved) → how you get paid (mining, payouts, levels, keep what you earn) → what to expect from antivirus →
+the settings (the same list as the settings panel) → "You're set". It saves only the address and the options and never
+starts mining; Finish lands on the main screen with the coin ready to press. Settings → "Show the welcome again".
+
+## Window, icon and look
+- The window works from 440 × 520 up: one column below ~760 px, panels stack inside the right column when it gets
+  narrow, the layout stops widening at 1480 px and scales up on big screens (zoom 1.15 / 1.3 / 1.45 from 1680 / 2100 /
+  2500 px wide).
+- Icons come from `apps/web/brand/logo/hashcoin-1024.png` (gold coin, white italic hash): `npx @tauri-apps/cli@2 icon`
+  for the PNG/ICNS set (mobile folders dropped), and `icon.ico` rebuilt with Pillow to add the 20 and 40 px sizes
+  (16, 20, 24, 32, 40, 48, 64, 128, 256). The tray loads the `.ico` entry for its own size (`tray_icon` in `main.rs`).
+- Brand art in `ui/brand/`: the logo and the Discord banner (as JPEG) on the welcome; the banner's gold dot field,
+  drawn in CSS with theme colors, behind the header.
+
 ## Settings
 Gear button in the header: opens a full-window panel (Back button or Esc to close). Pop-ups such as the antivirus
 message open large over a dimmed backdrop; both fade in and out (instant with reduced motion), keep keyboard focus

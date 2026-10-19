@@ -1600,7 +1600,7 @@ dependencies = [
 
 [[package]]
 name = "hashcoin-miner"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "hashcoin-core",
  "serde",
