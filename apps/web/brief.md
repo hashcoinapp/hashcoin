@@ -1,7 +1,7 @@
 # Hashcoin ($HASH): research brief
 
 <!-- Mode blocks: build_pages.mjs keeps the prelaunch or the live blocks (config.js `mode`) and fills the {{...}} values. -->
-A plain fact sheet about Hashcoin for people and AI assistants researching it: what it is, how it works, the numbers, the risks, and how to check each claim. It's written by the project, so check the claims rather than taking them on trust; the last section says how. Nothing here is financial advice or a promise of returns.
+The facts about Hashcoin in one place, for people and AI assistants researching it: what it is, how it works, the numbers, the risks and how to check each claim. Nothing here is financial advice or a promise of returns.
 
 <!-- prelaunch -->
 - Status: **pre-launch** (this version: October 19, 2026). **Launch: Saturday, October 24, 2026, 1 pm ET (17:00 UTC)**, with a countdown on the website.
@@ -17,101 +17,84 @@ A plain fact sheet about Hashcoin for people and AI assistants researching it: w
 <!-- /prelaunch -->
 <!-- live -->
 - Contract address: **{{ca}}** (Solana, Token-2022). It was published on https://hashcoin.app first; any other address is not Hashcoin's.
-- Buy: {{buy}} (any Solana wallet or aggregator works; check the quote, some routes handle a token tax less well)
+- Buy: {{buy}} (any Solana wallet or aggregator works)
 - Chart and token: DexScreener {{dexscreener}}, Birdeye {{birdeye}}, Solscan {{solscan}}
 - Live payouts: https://hashcoin.app/#live (the payout record, from https://api.hashcoin.app/v1/stats)
 <!-- /live -->
 
 ## In one paragraph
 
-$HASH is a Solana token (Token-2022) with a 2–5% tax on every transfer, buy and sell. The tax is paid back out to two groups: people who hold $HASH, and people who mine with the Hashcoin Windows app. The app mines whichever coin pays a user's GPU the most; the platform sells what was mined and uses it to buy $HASH on the open market, which is how miners are paid. So mining creates steady buying of $HASH, and trading creates the tax that rewards holders and gives miners who also hold $HASH a bonus. A public formula sets the tax rate and the split.
+$HASH is a Solana token with buying built in. Gaming PCs and other GPUs run the Hashcoin Windows app, which mines whichever coin pays each card the most. What they mine is sold, and the proceeds buy $HASH on the open market, every day; that $HASH is the miners' pay. On top of that, a 2–5% tax on every trade, set by a public formula, is paid back out to holders and to miners who hold $HASH. Holding earns from every trade, mining earns from your GPU, and doing both earns from both.
+
+## What makes it different
+
+- **Outside money comes in.** Most "holders earn from every trade" tokens only move money between their own traders. $HASH adds real value from outside: GPUs mine other coins (Pearl, Quantus, QubitCoin), and the proceeds of selling them buy $HASH on the market. Every GPU that joins adds more of that buying.
+- **Mining pays well right now, and the app follows the best coin.** Pearl, the coin most newer NVIDIA cards mine, rose from about $0.59 in mid-September to about $1.87–2.10 in mid-October 2026, and what a GPU earns mining it rose with it. Coin prices move both ways, so the app re-checks every few hours and switches each card to whichever coin pays most: a drop in one coin doesn't stop the buying.
+- **Miners have a reason to buy, too.** The miner bonus needs a $50+ bag, and higher levels need $500 and $2,500, multiplying the bonus 2× and 4×. So on top of the market buys from mining, miners who want the bigger bonus top up their bags with $HASH.
+- **A tax that can't be dodged.** The tax is enforced by Solana's Token-2022 program on every transfer, in every pool, aggregator and wallet. Earlier tax-sharing tokens failed when traders simply bought somewhere else; that can't happen here.
+- **It adjusts to the market.** A public formula sets the rate between 2% and 5%: quiet trading raises it so miners keep being paid, busy trading lowers it and holders take a bigger cut. Every change shows on-chain about 4 days before it applies.
+- **Built for holders.** Your level comes from your bag, and selling counts 3× against it, so the people who hold keep their share and quick flippers lose theirs.
+- **Fair launch.** 21,000,000 supply, minting switched off for good, no presale, no team or marketing allocation. The dev bag is 1%, bought in public as the first trade, and gets no payouts.
+- **Protected launch.** The launch curve's trading fee starts at 20% and falls to 1% over the first 5 minutes, so sniper bots can't take the launch cheaply.
+- **Everything on-chain.** Every payout is a Solana transaction, listed on the website with Solscan links.
 
 ## How it works
 
-1. **Mining.** A user installs the Windows app, pastes a public Solana wallet address (never a seed phrase) and presses Start. The app detects each GPU, the server assigns the coin that pays that card the most, and the app runs a miner on spare GPU power. The miners are third-party programs (ForgeMiner, which is closed-source, and BzMiner); the app downloads only the official release whose SHA-256 matches a list the server signs. Coins today: Pearl (PRL), Quantus (QUAN) and QubitCoin (QTC); the list can change.
+1. **Mining.** A user installs the Windows app, pastes a public Solana wallet address (never a seed phrase) and presses Start. The app detects each GPU, the server assigns the coin that pays that card the most, and the app mines on GPU power that isn't being used. It downloads only official miner releases (ForgeMiner and BzMiner) whose SHA-256 matches a list the server signs. Coins today: Pearl (PRL), Quantus (QUAN) and QubitCoin (QTC); the list follows what pays best.
 2. **Market buys.** The platform sells the mined coins and buys $HASH with the proceeds. Miners are paid that $HASH.
-3. **The tax.** Every transfer of $HASH, in any pool, aggregator or wallet, pays the tax. It is enforced by Solana's Token-2022 transfer-fee extension, so it can't be avoided by trading somewhere else.
+3. **The tax.** Every transfer of $HASH pays the tax, collected by the token program itself.
 4. **Payouts.** The collected tax is split by the formula below and paid out in $HASH:
-   - **Miners who hold a bag** ($50 or more of $HASH) get a bonus on top of their mining, aiming to lift their average pay to 5× what their GPUs mined. Miners with no bag are paid for their mining only.
+   - **Miners who hold a bag** ($50 or more of $HASH) get a bonus on top of their mining, aiming to lift their average pay to 5× what their GPUs mined.
    - **Holders** share the rest, never less than 1% of every trade.
    - **Development** gets a small share (5–10% of the tax).
 
-## Where the money comes from
-
-- **Mining adds buying of 1× its value, no more.** A GPU that mines $3.50 a day leads to $3.50 a day of $HASH bought on the market.
-- **The bonus is not new buying.** It is $HASH collected as tax from traders and handed to miners with a bag. So miners are paid by trading volume.
-- **If miners sell what they're paid, mining adds more selling than buying.** That's why the bonus only goes to miners who hold at least $50 of $HASH, grows with the bag (levels), and selling counts 3× against the bag (below), so selling pay costs the bonus. Whether miners hold is still up to them.
-- **Holder rewards are trading volume × the tax.** When trading slows, rewards shrink and the tax rises to 5%.
-
-How it works out per mining GPU, if every miner holds a bag (average GPU, $3.50 a day; the engine's own formula):
-
-| Daily trading volume per mining GPU | Tax | A miner's pay | New buying from mining | Holders' cut of volume |
-|---|---|---|---|---|
-| $50 | 5% | 1.5× ($5.38) | $3.50 | 1% |
-| $100 | 5% | 2.1× ($7.25) | $3.50 | 1% |
-| $200 | 5% | 3.1× ($11.00) | $3.50 | 1% |
-| $370 | 5% | 5× ($17.38) | $3.50 | 1% |
-| $750 | 3.25% | 5× ($17.50) | $3.50 | 1.13% |
-| $1,500 | 2.25% | 5.3× ($18.69) | $3.50 | 1.02% |
-
-The 5× target needs about $370 of daily trading per mining GPU. With 1,000 GPUs mining, that's about $370,000 of trading a day. Below it, miners get less than 5× and the tax stays at 5%.
-
 ## The tax and the split
 
-- **Rate:** 2–5%, in 0.25% steps. The formula picks the lowest rate at which miners reach, on average, 5× their mining **and** holders still get at least 1% of trading volume. If no rate in the range does both, the rate is 5%. In practice the lowest reachable rate is 2.25%.
-- **Busy trading lowers the tax; quiet trading raises it** (and more of it then goes to miners).
+- **Rate:** 2–5%, in 0.25% steps. The formula picks the lowest rate at which miners reach, on average, 5× their mining **and** holders still get at least 1% of trading volume; otherwise 5%.
 - **Split of the tax:**
-  - Development: 5–10% of the tax (10% at a 2% tax, falling to 5% at a 5% tax).
-  - Miners with a bag: 45–75% (what lifts their average to 5×, capped so holders keep at least 20% of the tax).
-  - Holders: the rest, and always at least 1% of volume.
-- **Example, per $100,000 traded:** $2,000–5,000 of tax; up to $3,750 to miners; at least $1,000 to holders; $200–250 to development.
-- **Rate changes are public in advance.** Token-2022 applies a new rate only two epochs after it's set (about 4 days), so every change is visible on-chain before it takes effect.
-- **On the launch curve the rate is fixed at 5%.** The formula starts after the token graduates to its permanent pool (see Launch).
-- **No burn.** All of the holder side is paid out.
+  - Development: 5–10% (10% at a 2% tax, falling to 5% at a 5% tax).
+  - Miners with a bag: 45–75%, what lifts their average to 5×.
+  - Holders: the rest, never less than 20% of the tax or 1% of volume.
+- **Per $100,000 traded:** $2,000–5,000 of tax; up to $3,750 to miners; at least $1,000 to holders; $200–250 to development.
+- **On the launch curve the rate is fixed at 5%.** The formula starts once the token graduates to its permanent pool.
+- **No burn.** Everything is paid out.
 
 ## Levels
 
-One ladder, no hold clock. The **qualified bag** sets the level, and the level counts for both holder rewards and the miner bonus.
+One ladder, no waiting. Your bag sets your level, and the level counts for both holder rewards and the miner bonus.
 
-**Qualified bag = bag − 2 × what you've sold.** Selling counts 3×: sell $100 of a $500 bag and the bag is $400 but qualifies as $200 (Level 2 → Level 1) until more is bought back. Buying counts at once. Selling everything wipes the count, so a returning buyer starts fresh. It's counted in tokens, from public on-chain transfers.
-
-| Level | Qualified bag | Weight |
+| Level | Bag | Share |
 |---|---|---|
-| No level | Under $50 | Mining is paid; no holder rewards, no bonus |
 | Level 1 | $50+ | 1× |
 | Level 2 | $500+ | 2× |
 | Level 3 | $2,500+ | 4× |
 
-- **Holder share** = qualified bag × weight.
-- **Miner bonus share** = √(the GPU's mining earnings in USD) × weight. The square root gives smaller cards a bigger boost relative to what they mine.
-- Mined $HASH counts toward the bag, so a miner can reach Level 1 by mining alone.
-- **Any transfer out counts as selling**, including to a pool, an exchange or another wallet. Wallets can be linked (by signing a message) so moving between your own wallets doesn't count.
-- A miner who sells their pay drops below their level's line and loses the bonus with it.
-- No hold clock means someone could buy right before a payout; the 2–5% tax each way costs more than a payout pays, so that doesn't pay off.
-- **Prices for levels** use the higher of the 1-hour and 7-day average prices, so a sudden dip doesn't drop a level; a level lost in a long dip returns as soon as the bag is back above the line.
-- Splitting a bag across wallets earns nothing extra: holder rewards follow bag size.
+- **Selling counts 3×:** sell $100 of a $500 bag and the bag is $400 but counts as $200 (Level 2 → Level 1) until more is bought back. Buying counts at once. Selling everything starts you fresh. It's worked out from public on-chain transfers.
+- **Holder share** = counted bag × level. **Miner bonus share** = √(the GPU's mining earnings) × level, so smaller cards get a bigger boost relative to what they mine.
+- **Mined $HASH counts toward your bag**, so a miner can reach Level 1 by mining alone. Mining without a bag is paid in full, without the bonus.
+- **Wallets can be linked** (by signing a free message), so moving $HASH between your own wallets doesn't count as selling.
+- **Levels use the higher of the 1-hour and 7-day average price**, so a sudden dip doesn't drop anyone a level.
 
 ## Payouts
 
-- **Miners:** about every 10 minutes, in $HASH, straight to their wallet. Mined coins can take hours to confirm and sell, so about 75% of the estimated mining value is paid right away and the rest once the coin is sold, trued up to the actual sale price. Overpayments are absorbed by the platform, never clawed back.
-- **Holders:** about every hour at launch (the payout settings can change it if transaction costs require).
-- **Mined $HASH counts as a bag**, so miners also earn holder rewards and can reach higher levels.
-- **Our own payouts pay the tax too** (Token-2022 has no exemptions). The platform sends a little extra so recipients get the full amount.
-- **Public record:** every payout is a Solana transaction. <!-- prelaunch -->After launch the website lists payouts with Solscan links and shows what each level was actually paid in the last 24 hours.<!-- /prelaunch --><!-- live -->The website's Live tab (https://hashcoin.app/#live) lists recent payouts with Solscan links; the raw record is at https://api.hashcoin.app/v1/stats.<!-- /live -->
+- **Miners:** about every 10 minutes, in $HASH, straight to their wallet. About 75% of the mining value is paid right away and the rest once the mined coin is sold, at the real sale price. If the platform overpays, it absorbs the difference; it never claws back.
+- **Holders:** about every hour.
+- **Recipients get the full amount:** the platform's own payouts pay the tax too, so it sends a little extra.
+- **Public record:** every payout is a Solana transaction. <!-- prelaunch -->From launch, the website lists payouts with Solscan links and shows what each level was actually paid in the last 24 hours.<!-- /prelaunch --><!-- live -->The website's Live tab (https://hashcoin.app/#live) lists recent payouts with Solscan links; the raw record is at https://api.hashcoin.app/v1/stats.<!-- /live -->
 
-## Earnings estimates
+## Earnings
 
-Earnings depend on one ratio: daily trading volume divided by the number of GPUs mining. The website's calculator shows estimates at an assumed launch-week level of trading ($750 of daily volume per mining GPU, an average GPU earning $3.50/day). These are illustrations, not forecasts. Real payouts depend on volume, the number of miners and coin prices, and can fall to near zero.
+What anyone earns depends on trading volume and how many GPUs are mining. <!-- prelaunch -->The calculator on the website shows estimates at launch-week trading (an average GPU earning about $3.50 a day).<!-- /prelaunch --><!-- live -->The calculator on the website uses what was actually paid in the last 24 hours.<!-- /live --> They're estimates, not promises.
 
 ## Tokenomics
 
 - **Supply:** 21,000,000 $HASH, all created at launch. Minting and freezing are switched off for good.
 - **Chain:** Solana, Token-2022 with the transfer-fee extension. 6 decimals.
-- **Dev holding:** 1% of supply, bought openly at launch as the first trade, into one public wallet. Not locked. The dev wallet gets no miner or holder payouts.
+- **Dev holding:** 1% of supply, bought openly at launch as the first trade, into one public wallet. It gets no miner or holder payouts.
 - **No presale, no team or marketing allocation.**
-- **Tax authority:** nobody can change the rate while the token is on its launch curve (Meteora's program holds it, at 5%). At graduation it passes to the platform's payout wallet, which hands it straight to a 2-of-3 multisig. It is used only to set the rate the published formula gives.
+- **Tax authority:** nobody can change the rate while the token is on its launch curve (Meteora's program holds it, at 5%). From graduation, a 2-of-3 multisig holds it and sets the rate the published formula gives.
 <!-- prelaunch -->
-- **Every wallet the project controls** will be listed on the website at launch.
+- **Every wallet the project controls** is listed on the website from launch.
 <!-- /prelaunch -->
 <!-- live -->
 - **Every wallet the project controls:**
@@ -120,55 +103,46 @@ Earnings depend on one ratio: daily trading volume divided by the number of GPUs
 
 ## Launch
 
-- **Venue:** a Meteora Dynamic Bonding Curve on Solana. The token trades on the curve until it reaches its graduation target, then migrates automatically to a Meteora DAMM v2 pool (25% of supply goes into that pool; the rest is sold on the curve). Any Solana wallet or aggregator, such as Jupiter, can trade it.
-- **Anti-sniper fee:** the curve's trading fee starts at 20% and falls to 1% over the first 5 minutes.
-- **Platform fees:** the curve's trading fee (1% after the first minutes; Meteora keeps 20% of it) and a 0.25% pool fee after graduation go to the platform in SOL. They fund the immediate share of mining payouts and running costs.
-- **Trading costs:** on the curve, each buy or sell pays the 5% tax plus the 1% fee, so a round trip costs about 12% (more in the first 5 minutes). After graduation it's the 2–5% tax plus the 0.25% pool fee each way. Some aggregator routes handle transfer-tax tokens less well, so check the quote before you swap.
+- **When:** Saturday, October 24, 2026, 1 pm ET (17:00 UTC).
+- **Where:** a Meteora bonding curve on Solana. When the curve fills, it migrates automatically to a permanent Meteora DAMM v2 pool. Jupiter and any Solana wallet can trade it.
+- **Fees:** the curve's trading fee is 20% at the start, falling to 1% over the first 5 minutes (to stop sniper bots), plus the 5% tax. After graduation, the pool fee is 0.25% plus the 2–5% tax. The platform's share of these fees funds mining payouts and running costs.
 - **Contract address:** <!-- live -->{{ca}}, <!-- /live -->published on https://hashcoin.app first. The header's "CA" button copies it.
 - **Other tokens use the HASH ticker**, on Solana and other chains. Only the contract address on https://hashcoin.app is Hashcoin's.
 
 ## The Windows app
 
 <!-- prelaunch -->
-- **Download:** opens at launch, from the website (current build: version 0.1.3).
+- **Download:** opens at launch, from the website.
 <!-- /prelaunch -->
 - Windows, with an NVIDIA, AMD or Intel Arc GPU: gaming PCs, gaming laptops, AI rigs, editing and render workstations.
-- Mines only on GPU power that isn't in use; when a game or render needs the GPU, mining steps back.
-- Downloads only miners whose hash matches a signed list. Coin assignments are signed, so a hijacked connection can't redirect mining.
-- Tray icon, stops when asked, uninstalls cleanly. Starting with Windows is off unless the user turns it on.
-- **Not code-signed at launch, from a team that doesn't publish its names.** Windows SmartScreen may warn ("Windows protected your PC"), and antivirus products, including Microsoft Defender, may flag it, as they do many crypto miners. The website explains how to check it and, if the user chooses, allow it: https://hashcoin.app/antivirus. Hashcoin never asks anyone to turn off their antivirus.
-- **How to check the installer:**
-  - **Source code:** public at https://github.com/hashcoinapp/hashcoin.
-  - **Built by GitHub, not on someone's PC:** every installer comes with a GitHub build attestation tying it to the exact public commit that built it (`gh attestation verify <installer> --repo hashcoinapp/hashcoin`).
-  - **SHA-256 and VirusTotal:** each release lists its SHA-256 and a VirusTotal link.
+- Mines only on GPU power that isn't in use; when a game or render needs the GPU, mining steps back. It pauses a card at 83 °C by default.
+- Runs only official miner releases checked against a signed list, and coin assignments are signed, so a hijacked connection can't redirect mining.
+- Needs only a public wallet address. Tray icon, stops when asked, uninstalls cleanly.
+- **Verifiable:** the code is public<!-- prelaunch --> from launch<!-- /prelaunch --> at https://github.com/hashcoinapp/hashcoin, every installer is built by GitHub from that code with a signed build record (`gh attestation verify <installer> --repo hashcoinapp/hashcoin`), and each release lists its SHA-256 and a VirusTotal scan.
+- Like most mining software, and because it isn't code-signed yet, it can trigger Windows SmartScreen or antivirus warnings. https://hashcoin.app/antivirus shows how to check the file is genuine.
 <!-- live -->
 - **Current installer:** version {{version}}, {{downloadUrl}}, SHA-256 `{{sha256}}`.
 <!-- /live -->
-- **If you're cautious:** the app needs no wallet keys, so you can run it on a PC or Windows account that holds no wallets.
 
 ## Safety
 
 - Hashcoin never asks for a seed phrase or private key, and never DMs first.
-- The app needs only a public wallet address.
 - The contract address appears on the website first.
 
 ## Risks
 
-- $HASH is new and volatile and can lose most or all of its value.
-- Payouts depend on trading volume, the number of miners, coin prices and pool results, and can fall to near zero.
-- Mining costs electricity and adds heat and wear to hardware; those costs are the user's.
-- The 2–5% tax applies to every buy, sell and transfer, and selling counts 3× against your level.
-- New software can have bugs. The backend runs on a single server at launch; if it is offline, payouts pause until it is back.
-- The tax authority is held by the project (a 2-of-3 multisig from graduation on). The 2–5% range is the project's published formula, not an on-chain limit; any change is visible on-chain about 4 days before it applies.
-- Payouts are calculated by the project's server. The engine's code is public and every payout is on-chain, but you are trusting the project to run it as published.
-- Miners who sell their pay add selling pressure (see "Where the money comes from").
-- No independent audit or outside coverage yet.
+- $HASH is a new, volatile token and can lose value.
+- Payouts depend on trading volume, the number of miners and coin prices, and change day to day.
+- Mining uses electricity and adds heat to hardware.
+- The 2–5% tax applies to every buy, sell and transfer.
+- The tax rate is set by a multisig the project controls, following the published formula; any change shows on-chain about 4 days ahead.
+- Payouts are run by the project's payout service; every one is a public Solana transaction you can check.
 - Mining and tokens are regulated differently by country.
 
 ## How to check
 
-- The token's supply, tax rate and authorities: on Solscan, from the contract address on the website<!-- prelaunch --> (after launch)<!-- /prelaunch --><!-- live --> ({{solscan}})<!-- /live -->.
-- Payouts: the website's public payout list with Solscan links<!-- prelaunch --> (after launch)<!-- /prelaunch -->.
-- The installer: compare its SHA-256 with the one on the website, and check its GitHub build attestation.
-- The code: https://github.com/hashcoinapp/hashcoin (the payout engine is `packages/engine`).
+- The token's supply, tax rate and authorities: on Solscan, from the contract address on the website<!-- prelaunch --> (from launch)<!-- /prelaunch --><!-- live --> ({{solscan}})<!-- /live -->.
+- Payouts: the website's payout list with Solscan links<!-- prelaunch --> (from launch)<!-- /prelaunch -->.
+- The installer: its SHA-256 on the website, and its GitHub build record.
+- The code: https://github.com/hashcoinapp/hashcoin (the payout engine is `packages/engine`)<!-- prelaunch -->, public from launch<!-- /prelaunch -->.
 - The formula: the FAQ and the calculator on the website show the math.

@@ -32,8 +32,10 @@ pub struct Settings {
     /// Mine only after `idle_minutes` without keyboard or mouse input.
     pub only_when_idle: bool,
     pub idle_minutes: u32,
-    /// Pause while a game (or any app) is fullscreen.
-    pub pause_when_fullscreen: bool,
+    /// Pause while a game or another app uses the graphics card. On unless the user turns it off.
+    /// (Versions before Oct 19 had a fullscreen-only `pauseWhenFullscreen`, off by default; that key
+    /// is ignored, so everyone starts with this on.)
+    pub pause_for_games: bool,
     /// Pause a card at this temperature; it resumes 8 °C lower.
     pub temp_limit_c: u32,
     /// Board power cap in watts, for miners with a power-limit flag. None = the card's own limit.
@@ -44,7 +46,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             wallet: String::new(), rig_id: String::new(), api_override: String::new(),
-            start_with_windows: false, only_when_idle: false, idle_minutes: 5, pause_when_fullscreen: false,
+            start_with_windows: false, only_when_idle: false, idle_minutes: 5, pause_for_games: true,
             temp_limit_c: 83, power_limit_w: None,
         }
     }
@@ -73,7 +75,7 @@ impl Settings {
             temp_resume_c: self.temp_limit_c - 8,
             only_when_idle: self.only_when_idle,
             idle_after: Duration::from_secs(60 * self.idle_minutes as u64),
-            pause_when_fullscreen: self.pause_when_fullscreen,
+            pause_for_games: self.pause_for_games,
         }
     }
 
@@ -144,7 +146,7 @@ struct Slot {
     assignment: Option<Assignment>,
     supervisor: Option<Supervisor>,
     reason: String,
-    /// Why the safety guard is holding this GPU back (too hot, PC in use, fullscreen game).
+    /// Why the safety guard is holding this GPU back (too hot, PC in use, a game running).
     paused: Option<String>,
 }
 
@@ -161,6 +163,8 @@ pub struct Runtime {
     last_check_in_at: Option<String>,
     error: Option<String>,
     guard: Guard,
+    /// Reads which apps use the graphics card, for pausing while a game runs. Opened on first use.
+    gpu_watch: Option<system::GpuWatch>,
     blocked: Option<Blocked>,
     /// Exists while a miner is starting (see `blocked::StartMarker`).
     marker: StartMarker,
@@ -181,7 +185,7 @@ pub fn detect_gpus() -> Vec<Gpu> {
 
 impl Runtime {
     pub fn new(settings: Settings, api_base: String, keys: KeyRing, data_dir: PathBuf) -> Self {
-        Self { settings, api_base, keys, slots: Vec::new(), manifest: None, mining: false, last_check_in: None, last_check_in_at: None, error: None, guard: Guard::default(),
+        Self { settings, api_base, keys, slots: Vec::new(), manifest: None, mining: false, last_check_in: None, last_check_in_at: None, error: None, guard: Guard::default(), gpu_watch: None,
             blocked: None, marker: StartMarker::new(data_dir.join("miner-starting")), data_dir }
     }
 
@@ -302,7 +306,7 @@ impl Runtime {
         if let Some(why) = blocked { self.block(why); }
     }
 
-    /// Measure what the safety settings need (temperatures always; input and fullscreen only when
+    /// Measure what the safety settings need (temperatures always; input and GPU use only when
     /// those options are on) and update the guard.
     fn update_guard(&mut self) {
         let s = self.settings.safety();
@@ -314,12 +318,34 @@ impl Runtime {
             }
         }
         if s.only_when_idle { r.idle = system::idle_time(); }
-        if s.pause_when_fullscreen { r.fullscreen = system::fullscreen_app(); }
+        if s.pause_for_games {
+            r.gaming = self.gaming();
+        } else {
+            self.gpu_watch = None;
+        }
         // Slots whose miner pauses hot cards itself: the app only steps in as a backstop there.
         let own_limit: Vec<u32> = self.slots.iter().filter(|x| {
             x.assignment.as_ref().and_then(|a| self.manifest.as_ref()?.find(&a.miner_id)).is_some_and(|m| m.handles_temperature())
         }).map(|x| x.id).collect();
         self.guard.update(&s, &r, |slot| own_limit.contains(&slot), Instant::now());
+    }
+
+    /// Whether a game (or another app) is using the graphics card: a fullscreen app that isn't a
+    /// browser or video player, or any process but our miners busy on the card's 3D or compute
+    /// engines (windowed games, renders, AI work).
+    fn gaming(&mut self) -> bool {
+        if system::fullscreen_app().is_some_and(|n| hashcoin_core::safety::fullscreen_is_game(&n)) { return true; }
+        if self.gpu_watch.is_none() { self.gpu_watch = system::GpuWatch::new(); }
+        let Some(samples) = self.gpu_watch.as_mut().and_then(|w| w.sample()) else {
+            self.gpu_watch = None;
+            return false;
+        };
+        let mut ignore: Vec<u32> = self.slots.iter().filter_map(|s| match s.supervisor.as_ref()?.state {
+            MinerState::Running { pid, .. } => Some(pid),
+            _ => None,
+        }).collect();
+        ignore.push(std::process::id());
+        hashcoin_core::safety::gaming(&hashcoin_core::safety::gpu_use_by_pid(&samples), &ignore, system::process_name)
     }
 
     fn get_signed<T: serde::de::DeserializeOwned>(&self, env: Envelope) -> Result<T, String> {

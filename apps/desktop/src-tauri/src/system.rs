@@ -1,5 +1,5 @@
 //! What the app needs to know about the PC: the graphics cards, how hot each NVIDIA card is, how
-//! long since the last input, and whether an app is fullscreen. Windows APIs only, read in-process:
+//! long since the last input, which apps use the graphics card, and whether an app is fullscreen. Windows APIs only, read in-process:
 //! the app starts no helper programs (no PowerShell, no nvidia-smi), so the verified miner is the
 //! only program it ever runs. Elsewhere these report nothing.
 
@@ -178,10 +178,24 @@ pub fn idle_time() -> Option<Duration> {
     }
 }
 
-/// True while a game or other app fills the screen: Windows' own "busy / fullscreen Direct3D" state,
-/// or a foreground window covering its whole monitor (borderless fullscreen games).
+/// The file name of the app filling the screen, if one does: Windows' own "busy / fullscreen
+/// Direct3D" state, or a foreground window covering its whole monitor (borderless fullscreen games).
 #[cfg(windows)]
-pub fn fullscreen_app() -> bool {
+pub fn fullscreen_app() -> Option<String> {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+    if !fills_screen() { return None; }
+    // SAFETY: plain Win32 calls with a valid out-parameter.
+    let pid = unsafe {
+        let mut pid = 0u32;
+        GetWindowThreadProcessId(GetForegroundWindow(), &mut pid);
+        pid
+    };
+    if pid == 0 { return None; }
+    process_name(pid)
+}
+
+#[cfg(windows)]
+fn fills_screen() -> bool {
     use windows_sys::Win32::Foundation::RECT;
     use windows_sys::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST};
     use windows_sys::Win32::UI::Shell::{SHQueryUserNotificationState, QUNS_BUSY, QUNS_PRESENTATION_MODE, QUNS_RUNNING_D3D_FULL_SCREEN};
@@ -209,11 +223,108 @@ pub fn fullscreen_app() -> bool {
     }
 }
 
+/// How much of the graphics card each process uses: Windows' "GPU Engine" counters, the numbers
+/// Task Manager shows per app, for every card and vendor. Rates need two samples, so the query stays
+/// open and each `sample` reports the average since the previous one (one mining tick).
+#[cfg(windows)]
+pub struct GpuWatch { query: *mut core::ffi::c_void, counter: *mut core::ffi::c_void }
+
+// SAFETY: PDH query handles aren't tied to the thread that opened them; the runtime only ever uses
+// this from one thread at a time (behind its mutex).
+#[cfg(windows)]
+unsafe impl Send for GpuWatch {}
+
+#[cfg(windows)]
+impl GpuWatch {
+    /// None when the counters aren't available (turned off on some PCs).
+    pub fn new() -> Option<Self> {
+        use windows_sys::Win32::System::Performance::{PdhAddEnglishCounterW, PdhCloseQuery, PdhCollectQueryData, PdhOpenQueryW};
+        let path: Vec<u16> = r"\GPU Engine(*)\Utilization Percentage".encode_utf16().chain(Some(0)).collect();
+        // SAFETY: plain PDH calls with valid out-pointers; the query is closed on every failure.
+        unsafe {
+            let mut query = std::ptr::null_mut();
+            if PdhOpenQueryW(std::ptr::null(), 0, &mut query) != 0 { return None; }
+            let mut counter = std::ptr::null_mut();
+            if PdhAddEnglishCounterW(query, path.as_ptr(), 0, &mut counter) != 0 {
+                PdhCloseQuery(query);
+                return None;
+            }
+            PdhCollectQueryData(query);
+            Some(Self { query, counter })
+        }
+    }
+
+    /// Each engine counter's name and its use (%) since the last call. None if reading failed.
+    pub fn sample(&mut self) -> Option<Vec<(String, f64)>> {
+        use windows_sys::Win32::System::Performance::{
+            PdhCollectQueryData, PdhGetFormattedCounterArrayW, PDH_CSTATUS_NEW_DATA, PDH_CSTATUS_VALID_DATA, PDH_FMT_COUNTERVALUE_ITEM_W,
+            PDH_FMT_DOUBLE, PDH_MORE_DATA,
+        };
+        const NOCAP100: u32 = 0x8000;
+        // SAFETY: the buffer is sized as PDH asks, aligned for the item structs, and outlives the
+        // name pointers read from it.
+        unsafe {
+            if PdhCollectQueryData(self.query) != 0 { return None; }
+            let (mut bytes, mut count) = (0u32, 0u32);
+            let r = PdhGetFormattedCounterArrayW(self.counter, PDH_FMT_DOUBLE | NOCAP100, &mut bytes, &mut count, std::ptr::null_mut());
+            if r != PDH_MORE_DATA || bytes == 0 { return if r == 0 { Some(Vec::new()) } else { None }; }
+            let item = std::mem::size_of::<PDH_FMT_COUNTERVALUE_ITEM_W>();
+            let mut buf: Vec<PDH_FMT_COUNTERVALUE_ITEM_W> = Vec::with_capacity((bytes as usize).div_ceil(item));
+            if PdhGetFormattedCounterArrayW(self.counter, PDH_FMT_DOUBLE | NOCAP100, &mut bytes, &mut count, buf.as_mut_ptr()) != 0 { return None; }
+            buf.set_len(count as usize);
+            Some(buf.iter().filter(|i| i.FmtValue.CStatus == PDH_CSTATUS_VALID_DATA || i.FmtValue.CStatus == PDH_CSTATUS_NEW_DATA).map(|i| {
+                let mut n = 0;
+                while *i.szName.add(n) != 0 { n += 1; }
+                (String::from_utf16_lossy(std::slice::from_raw_parts(i.szName, n)), i.FmtValue.Anonymous.doubleValue)
+            }).collect())
+        }
+    }
+}
+
+#[cfg(windows)]
+impl Drop for GpuWatch {
+    fn drop(&mut self) {
+        // SAFETY: the query was opened in `new` and is closed once.
+        unsafe { windows_sys::Win32::System::Performance::PdhCloseQuery(self.query); }
+    }
+}
+
+/// A running process's file name ("game.exe"), if Windows lets this user read it.
+#[cfg(windows)]
+pub fn process_name(pid: u32) -> Option<String> {
+    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION};
+    // SAFETY: plain Win32 calls; the handle is closed before returning.
+    unsafe {
+        let h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if h.is_null() { return None; }
+        let mut buf = [0u16; 1024];
+        let mut len = buf.len() as u32;
+        let ok = QueryFullProcessImageNameW(h, PROCESS_NAME_WIN32, buf.as_mut_ptr(), &mut len) != 0;
+        CloseHandle(h);
+        if !ok { return None; }
+        let path = String::from_utf16_lossy(&buf[..len as usize]);
+        path.rsplit(['\\', '/']).next().map(str::to_string)
+    }
+}
+
+#[cfg(not(windows))]
+pub struct GpuWatch;
+
+#[cfg(not(windows))]
+impl GpuWatch {
+    pub fn new() -> Option<Self> { None }
+    pub fn sample(&mut self) -> Option<Vec<(String, f64)>> { None }
+}
+
+#[cfg(not(windows))]
+pub fn process_name(_pid: u32) -> Option<String> { None }
+
 #[cfg(not(windows))]
 pub fn idle_time() -> Option<Duration> { None }
 
 #[cfg(not(windows))]
-pub fn fullscreen_app() -> bool { false }
+pub fn fullscreen_app() -> Option<String> { None }
 
 #[cfg(all(test, windows))]
 mod tests {
@@ -235,5 +346,35 @@ mod tests {
         for g in &nvidia {
             assert!(adapters.iter().any(|a| a == &g.name), "DirectX and NVML name {} the same: {adapters:?}", g.name);
         }
+    }
+
+    /// The GPU counters read, and pick up a process that starts using the card after the watch
+    /// opened (a game launched while mining). Set HASH_TEST_GPU_EXE to a program that uses the GPU
+    /// (with HASH_TEST_GPU_ARGS) to check the second part; without it, only the reading is checked.
+    #[test]
+    fn watches_gpu_use_per_process() {
+        let mut w = super::GpuWatch::new().expect("GPU Engine counters available");
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        let first = w.sample().expect("sample");
+        assert!(first.iter().all(|(n, _)| n.starts_with("pid_")), "{:?}", first.first());
+        std::thread::sleep(std::time::Duration::from_secs(3));
+        let mut busy: Vec<_> = hashcoin_core::safety::gpu_use_by_pid(&w.sample().unwrap()).into_iter().collect();
+        busy.sort_by(|a, b| b.1.total_cmp(&a.1));
+        for (pid, used) in busy.iter().take(6) { eprintln!("{used:5.1}%  {pid}  {:?}", super::process_name(*pid)); }
+        let Ok(exe) = std::env::var("HASH_TEST_GPU_EXE") else { return };
+        let args: Vec<String> = std::env::var("HASH_TEST_GPU_ARGS").unwrap_or_default().split(' ').filter(|a| !a.is_empty()).map(String::from).collect();
+        let mut child = std::process::Command::new(exe).args(args).stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null()).spawn().unwrap();
+        let pid = child.id();
+        let mut seen = false;
+        for _ in 0..10 {
+            std::thread::sleep(std::time::Duration::from_secs(1));
+            let tag = format!("pid_{pid}_");
+            let mine: Vec<_> = w.sample().unwrap().into_iter().filter(|(n, _)| n.starts_with(&tag)).collect();
+            eprintln!("pid {pid}: {mine:?}");
+            if mine.iter().any(|(_, u)| *u > 0.0) { seen = true; break; }
+        }
+        let _ = child.kill();
+        assert!(seen, "a process started after the watch opened shows up");
+        assert_eq!(super::process_name(std::process::id()).map(|n| n.to_lowercase().ends_with(".exe")), Some(true));
     }
 }

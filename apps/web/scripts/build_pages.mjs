@@ -15,6 +15,7 @@
 // with {{ca}}, {{buy}}, ... filled from config.js.
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import { CONFIG, SAMPLE_CA, WEB, checkConfig, linksFor, loadConfig } from "./site_config.mjs";
 
@@ -46,6 +47,20 @@ for (const p of COPY) {
 cpSync(join(WEB, "brand/logo/favicon.ico"), join(DIST, "favicon.ico"));
 // The preview's sample values go after the real settings, in dist-live/ only.
 if (PREVIEW) writeFileSync(join(DIST, "assets/js/config.js"), configText + "\n" + sampleText);
+
+// Cache busting (Oct 19: a browser kept the old site.css for hours and showed the new page
+// unstyled). Every page links its CSS, JS and images with ?v=<content hash>, so a changed file
+// gets a new address and browsers can never mix an old file with a new page.
+for (const p of PAGES) {
+  const file = join(DIST, p);
+  const html = readFileSync(file, "utf8").replace(/((?:href|src)=")(assets\/[^"?#]+)(")/g, (m, a, path, b) => {
+    const target = join(DIST, path);
+    if (!existsSync(target)) return m;
+    const v = createHash("sha256").update(readFileSync(target)).digest("hex").slice(0, 10);
+    return `${a}${path}?v=${v}${b}`;
+  });
+  writeFileSync(file, html);
+}
 
 // brief.md and llms.txt: keep this mode's blocks and fill in the launch values.
 const live = cfg.mode === "live";
