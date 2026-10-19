@@ -25,7 +25,7 @@
   const xtabs = $$(".xtabs [role=tab]");
   const ids = xtabs.map((t) => t.getAttribute("aria-controls"));
   const setHash = (h) => { try { history.replaceState(null, "", h); } catch (e) { /* sandboxed preview */ } };
-  const ALIAS = { waitlist: "launch", trust: "launch", status: "launch", mining: "pc", math: "how", main: null };
+  const ALIAS = { waitlist: "launch", trust: "launch", status: "launch", live: "launch", buy: "launch", payouts: "launch", wallets: "launch", mining: "pc", math: "how", main: null };
   function openTab(id) {
     xtabs.forEach((t) => {
       const on = t.getAttribute("aria-controls") === id;
@@ -214,7 +214,8 @@
       `            = <b>${money(hb.perDay)}/day</b>`;
     $("#plug-note").textContent =
       `Below $${Math.round(mk.targetVolPerGpu)} per GPU even a 5% tax can't lift miners to 5×; above it the tax falls as trading gets busier, never leaving holders under 1% of volume. ` +
-      `$${E.volPerGpu} is launch-week trading; later it's usually lower. After launch this is replaced by what each level was actually paid.`;
+      `$${E.volPerGpu} is launch-week trading; later it's usually lower. ` +
+      (document.documentElement.dataset.mode === "live" ? "What each level was actually paid is under Live." : "After launch this is replaced by what each level was actually paid.");
   }
   render();
 

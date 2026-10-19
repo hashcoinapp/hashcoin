@@ -22,6 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script src="assets/js/config.js"></script>
 <script>try{if(localStorage.getItem("hc-theme")==="light")document.documentElement.dataset.theme="light"}catch(e){}</script>
 <link rel="stylesheet" href="assets/css/site.css">
 </head>
@@ -58,7 +59,8 @@
       <button class="ca-btn" type="button" data-ca aria-label="Contract address: published on this site at launch">
         <span>CA</span><b class="ca-value ca-long">At launch</b>
       </button>
-      <a class="btn btn-gold btn-sm" href="#launch"><span class="hide-sm">Join the waitlist</span><span class="show-sm">Waitlist</span></a>
+      <a class="btn btn-gold btn-sm" href="#launch" data-mode="prelaunch"><span class="hide-sm">Join the waitlist</span><span class="show-sm">Waitlist</span></a>
+      <a class="btn btn-gold btn-sm" href="#launch" data-mode="live" data-link="buy"><span class="hide-sm">Buy $HASH</span><span class="show-sm">Buy</span></a>
       <button class="icon-btn menu-btn" type="button" aria-expanded="false" aria-controls="mobile-nav" aria-label="Menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
@@ -93,9 +95,17 @@
           <li><b>Mine it.</b> Paid in $HASH. Hold $50+ and you also get a bonus on top.</li>
           <li><b>Or both.</b> Your bag sets your level, and a higher level means a bigger bonus.</li>
         </ul>
-        <div class="hero-ctas">
+        <div class="hero-ctas" data-mode="prelaunch">
           <a class="btn btn-gold" href="#launch">Join the waitlist <span class="tag" data-waitlist-soon>Coming soon</span></a>
           <a class="btn btn-ghost" href="#earn">What would I make?</a>
+        </div>
+        <div class="hero-ctas" data-mode="live">
+          <a class="btn btn-gold" href="#launch" data-link="buy">Buy $HASH</a>
+          <a class="btn btn-ghost" href="#earn">What would I make?</a>
+        </div>
+        <div class="hero-ca" data-mode="live">
+          <button class="ca-copy" type="button" data-ca><span class="ca-k">CA</span><code class="ca-text" data-ca-text></code><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></svg></button>
+          <span class="chart-links"><a href="#launch" data-link="dexscreener">DexScreener</a><a href="#launch" data-link="birdeye">Birdeye</a><a href="#launch" data-link="solscan">Solscan</a></span>
         </div>
       </div>
 
@@ -264,7 +274,7 @@
           <button type="button" role="tab" id="t-levels" aria-controls="levels" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20v-5M12 20V10M19 20V4"/></svg><span>Levels</span></button>
           <button type="button" role="tab" id="t-token" aria-controls="token" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6.4 6.4"/></svg><span>Tokenomics</span></button>
           <button type="button" role="tab" id="t-pc" aria-controls="pc" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg><span>Mining</span></button>
-          <button type="button" role="tab" id="t-launch" aria-controls="launch" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c3 2.5 4.5 6 4 10l-2 3h-4l-2-3c-.5-4 1-7.5 4-10z"/><circle cx="12" cy="9.5" r="1.6"/><path d="M8.5 15l-2.5 2.5 1 2.5 3-2M15.5 15l2.5 2.5-1 2.5-3-2"/></svg><span>Launch</span></button>
+          <button type="button" role="tab" id="t-launch" aria-controls="launch" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true" data-mode="prelaunch"><path d="M12 3c3 2.5 4.5 6 4 10l-2 3h-4l-2-3c-.5-4 1-7.5 4-10z"/><circle cx="12" cy="9.5" r="1.6"/><path d="M8.5 15l-2.5 2.5 1 2.5 3-2M15.5 15l2.5 2.5-1 2.5-3-2"/></svg><svg viewBox="0 0 24 24" aria-hidden="true" data-mode="live"><path d="M3.5 17.5l5-5.5 4 3.5 7.5-8"/><path d="M15 7.5h5v5"/></svg><span data-mode="prelaunch">Launch</span><span data-mode="live">Live</span></button>
           <button type="button" role="tab" id="t-faq" aria-controls="faq" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1.1.9-1.1 1.6v.5M12 16.8v.2"/></svg><span>FAQ</span></button>
         </div>
       </div>
@@ -326,7 +336,7 @@
               <p class="both-note">Mined $HASH lands in your bag, so it counts toward your level and earns holder rewards too. Sell it and your bag counts 3× less, so your bonus drops too.</p>
             </div>
           </div>
-          <p class="xfoot">Estimate at launch-week trading, not a promise. <a href="#math">The math</a> · <a href="calculator.html">Full calculator</a></p>
+          <p class="xfoot">Estimate at launch-week trading, not a promise. <a href="#math">The math</a> · <a href="calculator.html">Full calculator</a><span data-mode="live"> · <a href="#launch">What was actually paid</a></span></p>
         </div>
       </div>
 
@@ -381,7 +391,7 @@
                   <ol class="feed pay" id="sim-pay" aria-hidden="true"></ol>
                 </div>
               </div>
-              <p class="panel-foot" id="sim-note">Simulated. The real feed with Solscan links starts at launch.</p>
+              <p class="panel-foot" id="sim-note"><span data-mode="prelaunch">Simulated. The real feed with Solscan links starts at launch.</span><span data-mode="live">Simulated. The real payouts, with Solscan links, are under <a href="#launch">Live</a>.</span></p>
             </div>
           </div>
         </details>
@@ -483,7 +493,7 @@
               <li>SHA-256 published</li>
             </ul>
             <div><a class="btn btn-gold" href="#" data-download data-soon="The Windows app isn't released yet. Join the waitlist to hear when it is.">Download for Windows <span class="tag" data-download-soon>Coming soon</span></a></div>
-            <p class="dl-note" data-download-info hidden>Version <span data-download-version></span>. SHA-256: <code class="sha" data-download-sha></code></p>
+            <p class="dl-note" data-download-info hidden>Version <span data-download-version></span>. SHA-256: <code class="sha" data-download-sha></code> <a href="#" data-download-vt target="_blank" rel="noopener">VirusTotal</a></p>
             <p class="dl-note">Windows or your antivirus may warn you the first time. <a href="antivirus.html">Why, and how to check it's ours</a>.</p>
           </div>
         </div>
@@ -538,15 +548,15 @@
             <div><dt>Split</dt><dd><b>Adjusts itself.</b> Miners average up to 5× their mining, holders get the rest (at least 1% of every trade).</dd></div>
             <div><dt>Burn</dt><dd>None</dd></div>
             <div><dt>Dev bag</dt><dd><b>1%</b>, bought in public, in one public wallet. No payouts.</dd></div>
-            <div><dt>Wallets</dt><dd>Every dev wallet listed here at launch.</dd></div>
-            <div><dt>Contract</dt><dd><b>Posted here first.</b> Any CA before that is fake.<code class="sha ca-full" data-ca-full hidden></code></dd></div>
+            <div><dt>Wallets</dt><dd><span data-mode="prelaunch">Every dev wallet listed here at launch.</span><span data-mode="live">Every wallet we control is <a href="#launch">listed under Live</a>.</span></dd></div>
+            <div><dt>Contract</dt><dd><span data-mode="prelaunch"><b>Posted here first.</b> Any CA before that is fake.</span><span data-mode="live"><b>Only this address is $HASH.</b></span><code class="sha ca-full" data-ca-full hidden></code></dd></div>
           </dl>
         </div>
       </div>
 
       <!-- LAUNCH -->
       <div class="xpanel" id="launch" role="tabpanel" aria-labelledby="t-launch" tabindex="0" hidden>
-        <div class="launch">
+        <div class="launch" data-mode="prelaunch">
           <div>
             <div class="xhead"><h2>Be mining at launch.</h2><p class="lede">Fewest miners on day one means the biggest share per GPU.</p></div>
             <form class="wl-form" data-waitlist onsubmit="return false;" aria-describedby="wl-note">
@@ -580,6 +590,63 @@
             </ol>
           </div>
         </div>
+
+        <div class="launch" data-mode="live">
+          <div>
+            <div class="xhead"><h2>$HASH is live.</h2><p class="lede">Launched <span data-launch-date>at launch</span> on a Meteora bonding curve. Check the address before you buy.</p></div>
+            <div class="ca-box">
+              <span class="ca-k">Contract address</span>
+              <code class="sha" data-ca-text></code>
+              <button class="btn btn-ghost btn-sm" type="button" data-ca>Copy</button>
+            </div>
+            <div class="hero-ctas">
+              <a class="btn btn-gold" href="#" data-link="buy">Buy $HASH on Jupiter</a>
+              <a class="btn btn-ghost" href="#pc">Download for Windows</a>
+            </div>
+            <p class="chart-links">Chart and token: <a href="#" data-link="dexscreener">DexScreener</a><a href="#" data-link="birdeye">Birdeye</a><a href="#" data-link="solscan">Solscan</a></p>
+            <ol class="status" data-phase-list>
+              <li class="done"><span>Done</span><div><b>Payout engine, coin switcher, Windows app</b></div></li>
+              <li class="done"><span>Done</span><div><b>Launch</b> on a Meteora bonding curve, <time data-launch-date></time></div></li>
+              <li class="now" data-phase="curve"><span>Now</span><div><b>Launch curve</b>. The tax is 5% until graduation.</div></li>
+              <li data-phase="damm"><span>Then</span><div><b>Graduation</b> to a Meteora DAMM v2 pool. The tax formula starts.</div></li>
+            </ol>
+            <p class="seed"><b>We never ask for your seed phrase and never DM first.</b></p>
+          </div>
+          <div class="launch-side">
+            <div class="panel live-stats" data-stats>
+              <div class="panel-head"><span class="live-dot">Payouts</span><span class="tag" data-s="updated">Loading</span></div>
+              <div class="panel-body">
+                <dl class="stat-grid">
+                  <div><dt>Tax now</dt><dd data-s="rate">—</dd></div>
+                  <div><dt>Traded, 24h</dt><dd data-s="volume">—</dd></div>
+                  <div><dt>Paid out, 24h</dt><dd data-s="paid">—</dd></div>
+                  <div><dt>Wallets</dt><dd data-s="wallets">—</dd></div>
+                </dl>
+                <div class="live-split" data-s="split-wrap" hidden>
+                  <div class="split-bar three" role="img" data-s="split"><div class="d"></div><div class="m"></div><div class="h"></div></div>
+                  <p class="split-legend" data-s="split-legend"></p>
+                </div>
+                <table class="lv-table live-lv" data-s="levels" hidden>
+                  <caption>Paid in the last 24h, per wallet</caption>
+                  <tbody>
+                    <tr class="lvrow l1"><td><span class="lvb">L1</span></td><td data-lvw="1"></td><td class="usd" data-lvp="1"></td></tr>
+                    <tr class="lvrow l2"><td><span class="lvb">L2</span></td><td data-lvw="2"></td><td class="usd" data-lvp="2"></td></tr>
+                    <tr class="lvrow l3"><td><span class="lvb">L3</span></td><td data-lvw="3"></td><td class="usd" data-lvp="3"></td></tr>
+                  </tbody>
+                </table>
+                <div class="live-rounds" data-s="rounds-wrap" hidden>
+                  <h3>Recent payouts</h3>
+                  <ol class="rounds" data-s="rounds"></ol>
+                </div>
+              </div>
+              <p class="panel-foot" data-s="note">Every payout is a Solana transaction.</p>
+            </div>
+            <div class="panel wallets">
+              <div class="panel-head"><span>Wallets we control</span></div>
+              <ul class="wallet-list" data-wallets></ul>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- FAQ -->
@@ -593,7 +660,7 @@
             <details><summary>Does the $HASH I mine earn holder rewards?</summary><div class="a"><p>Yes. Mined $HASH lands in your wallet and counts as your bag, so you get the miner bonus and holder rewards at the same time.</p></div></details>
             <details><summary>How is the tax split between miners and holders?</summary><div class="a"><p>It adjusts itself every payout. Miners get what lifts their average pay to 5× what their GPUs mine (45–75% of the tax). Holders get the rest, never less than 1% of every trade.</p></div></details>
             <details><summary>What happens if I sell?</summary><div class="a"><p>You pay the tax (2–5%), and the sale counts 3× against your bag for your level and rewards: sell $100 of a $500 bag and it counts as $200 until you buy back.</p></div></details>
-            <details><summary>How much will I make?</summary><div class="a"><p>It depends on trading volume and how many GPUs mine. The estimate uses launch-week trading. After launch, the site shows what each level was actually paid.</p></div></details>
+            <details><summary>How much will I make?</summary><div class="a"><p>It depends on trading volume and how many GPUs mine. The estimate uses launch-week trading.<span data-mode="prelaunch"> After launch, the site shows what each level was actually paid.</span><span data-mode="live"> What each level was actually paid is under <a href="#launch">Live</a>.</span></p></div></details>
             <details><summary>Will mining slow down my PC?</summary><div class="a"><p>No. The miner only uses GPU power you aren't using. When a game or render needs the GPU, mining steps back and only your hashrate drops.</p></div></details>
             <details><summary>Does it work on laptops and workstations?</summary><div class="a"><p>Yes. Any PC with an NVIDIA, AMD or Intel graphics card: gaming PCs, gaming laptops, AI rigs, editing and render machines.</p></div></details>
             <details><summary>Is this a rug?</summary><div class="a"><p>The tax follows a public formula that keeps it between 2% and 5%, and any change shows on-chain about 4 days before it applies. The dev bag is 1%, bought in public into one public wallet, and gets no payouts. Every payout is on-chain.</p></div></details>
@@ -613,7 +680,7 @@
         <p>Your GPU mines, buys $HASH and pays you. A 2–5% tax pays miners and holders.</p>
       </div>
       <div><h4>Product</h4><ul><li><a href="#earn">Earnings</a></li><li><a href="calculator.html">Calculator</a></li><li><a href="#levels">Levels</a></li><li><a href="#pc">Mining</a></li></ul></div>
-      <div><h4>Info</h4><ul><li><a href="faq.html">FAQ</a></li><li><a href="antivirus.html">Antivirus help</a></li><li><a href="#token">Tokenomics</a></li><li><a href="#launch">Launch</a></li></ul></div>
+      <div><h4>Info</h4><ul><li><a href="faq.html">FAQ</a></li><li><a href="antivirus.html">Antivirus help</a></li><li><a href="#token">Tokenomics</a></li><li><a href="#launch"><span data-mode="prelaunch">Launch</span><span data-mode="live">Live numbers</span></a></li><li data-mode="live"><a href="#launch" data-link="buy">Buy $HASH</a></li></ul></div>
       <div><h4>Community</h4><ul>
         <li><a href="#" data-social="x" data-soon="Our X account goes live closer to launch.">X (soon)</a></li>
         <li><a href="#" data-social="discord" data-soon="The Discord opens closer to launch.">Discord (soon)</a></li>
@@ -622,16 +689,16 @@
     </div>
     <div class="disclaimer">
       <p><b>Risk.</b> $HASH is a new, highly volatile token and can lose most or all of its value. Payouts depend on trading volume, the number of miners and coin prices, and can fall to near zero. Mining uses electricity and adds heat to your hardware. Estimates here are illustrations, not promises. Not financial advice.</p>
-      <p>© 2026 Hashcoin. Pre-launch preview.</p>
+      <p>© 2026 Hashcoin.<span data-mode="prelaunch"> Pre-launch preview.</span></p>
     </div>
   </div>
 </footer>
 
-<script src="assets/js/config.js"></script>
 <script src="assets/js/gpus.js"></script>
 <script src="assets/js/model.js"></script>
 <script src="assets/js/site.js"></script>
 <script src="assets/js/cycle.js"></script>
 <script src="assets/js/home.js"></script>
+<script src="assets/js/live.js"></script>
 </body>
 </html>

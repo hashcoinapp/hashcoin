@@ -5,14 +5,18 @@ Each page gets its CSS, JS, logo and screenshots inlined, so it renders correctl
 HTML file is opened or shared on its own, without the assets/ and brand/ folders.
 
 Usage (from the repo root):
-    python3 apps/web/scripts/build_standalone.py
+    python3 apps/web/scripts/build_standalone.py                 # standalone/ (the site as config.js sets it)
+    python3 apps/web/scripts/build_standalone.py --live-preview  # standalone-live/: live mode with the made-up
+                                                                 # values in scripts/live-sample.js (git-ignored, never deployed)
 """
 import base64
 import re
+import sys
 from pathlib import Path
 
 WEB = Path(__file__).resolve().parent.parent
-OUT = WEB / "standalone"
+PREVIEW = "--live-preview" in sys.argv
+OUT = WEB / ("standalone-live" if PREVIEW else "standalone")
 PAGES = ["index.html", "calculator.html", "faq.html", "antivirus.html"]
 
 
@@ -28,6 +32,8 @@ def build(name: str) -> str:
 
     def inline_script(m):
         js = (WEB / m.group(1)).read_text(encoding="utf-8")
+        if PREVIEW and m.group(1) == "assets/js/config.js":
+            js += "\n" + (WEB / "scripts/live-sample.js").read_text(encoding="utf-8")
         return "<script>\n" + js.replace("</script", "<\\/script") + "\n</script>"
 
     html = re.sub(r'<script src="(assets/js/[^"]+)"></script>', inline_script, html)
@@ -49,7 +55,7 @@ def main():
         leftovers = re.findall(r'(?:src|href)="(?:assets|brand)/[^"]+"', html)
         # Explicit UTF-8 and LF so Windows builds the same bytes as Linux.
         (OUT / name).write_text(html, encoding="utf-8", newline="\n")
-        print(f"wrote standalone/{name} ({len(html) // 1024} KB)" + (f"  unresolved: {leftovers}" if leftovers else ""))
+        print(f"wrote {OUT.name}/{name} ({len(html) // 1024} KB)" + (f"  unresolved: {leftovers}" if leftovers else ""))
 
 
 if __name__ == "__main__":

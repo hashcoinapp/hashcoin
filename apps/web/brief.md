@@ -1,12 +1,26 @@
 # Hashcoin ($HASH): research brief
 
+<!-- Mode blocks: build_pages.mjs keeps the prelaunch or the live blocks (config.js `mode`) and fills the {{...}} values. -->
 A plain fact sheet about Hashcoin for people and AI assistants researching it: what it is, how it works, the numbers, the weak points, and how to check each claim. It's written by the project, so check the claims rather than taking them on trust; the last section says how. Nothing here is financial advice or a promise of returns.
 
+<!-- prelaunch -->
 - Status: **pre-launch** (this version: October 18, 2026). Launch is planned for late October 2026; the date is announced on the website.
+<!-- /prelaunch -->
+<!-- live -->
+- Status: **live** since {{launchDate}}. It trades on a Meteora bonding curve until the curve fills, then on a Meteora DAMM v2 pool.
+<!-- /live -->
 - Website: https://hashcoin.app (FAQ: https://hashcoin.app/faq, calculator: https://hashcoin.app/calculator)
 - X: https://x.com/HashcoinSOL
 - Discord: https://discord.gg/XVYCbKD7mA
+<!-- prelaunch -->
 - Contract address: **not published yet.** It will appear on https://hashcoin.app first, at launch. Any address seen before that, or one that doesn't match the website, is not Hashcoin's.
+<!-- /prelaunch -->
+<!-- live -->
+- Contract address: **{{ca}}** (Solana, Token-2022). It was published on https://hashcoin.app first; any other address is not Hashcoin's.
+- Buy: {{buy}} (any Solana wallet or aggregator works; check the quote, some routes handle a token tax less well)
+- Chart and token: DexScreener {{dexscreener}}, Birdeye {{birdeye}}, Solscan {{solscan}}
+- Live payouts: https://hashcoin.app/#live (the payout record, from https://api.hashcoin.app/v1/stats)
+<!-- /live -->
 
 ## In one paragraph
 
@@ -83,7 +97,7 @@ One ladder, no hold clock. The **qualified bag** sets the level, and the level c
 - **Holders:** hourly or daily (still being decided before launch).
 - **Mined $HASH counts as a bag**, so miners also earn holder rewards and can reach higher levels.
 - **Our own payouts pay the tax too** (Token-2022 has no exemptions). The platform sends a little extra so recipients get the full amount.
-- **Public record:** every payout is a Solana transaction. After launch the website lists payouts with Solscan links and shows what each level was actually paid in the last 24 hours.
+- **Public record:** every payout is a Solana transaction. <!-- prelaunch -->After launch the website lists payouts with Solscan links and shows what each level was actually paid in the last 24 hours.<!-- /prelaunch --><!-- live -->The website's Live tab (https://hashcoin.app/#live) lists recent payouts with Solscan links; the raw record is at https://api.hashcoin.app/v1/stats.<!-- /live -->
 
 ## Earnings estimates
 
@@ -96,7 +110,13 @@ Earnings depend on one ratio: daily trading volume divided by the number of GPUs
 - **Dev holding:** 1% of supply, bought openly at launch as the first trade, into one public wallet. Not locked. The dev wallet gets no miner or holder payouts.
 - **No presale, no team or marketing allocation.**
 - **Tax authority:** nobody can change the rate while the token is on its launch curve (Meteora's program holds it, at 5%). At graduation it passes to the platform's payout wallet, which hands it straight to a 2-of-3 multisig. It is used only to set the rate the published formula gives.
+<!-- prelaunch -->
 - **Every wallet the project controls** will be listed on the website at launch.
+<!-- /prelaunch -->
+<!-- live -->
+- **Every wallet the project controls:**
+{{wallets}}
+<!-- /live -->
 
 ## Launch
 
@@ -104,7 +124,7 @@ Earnings depend on one ratio: daily trading volume divided by the number of GPUs
 - **Anti-sniper fee:** the curve's trading fee starts at 20% and falls to 1% over the first 5 minutes.
 - **Platform fees:** the curve's trading fee (1% after the first minutes; Meteora keeps 20% of it) and a 0.25% pool fee after graduation go to the platform in SOL. They fund the immediate share of mining payouts and running costs.
 - **Trading costs:** on the curve, each buy or sell pays the 5% tax plus the 1% fee, so a round trip costs about 12% (more in the first 5 minutes). After graduation it's the 2–5% tax plus the 0.25% pool fee each way. Some aggregator routes handle transfer-tax tokens less well, so check the quote before you swap.
-- **Contract address:** published on https://hashcoin.app first. The header's "CA" button copies it.
+- **Contract address:** <!-- live -->{{ca}}, <!-- /live -->published on https://hashcoin.app first. The header's "CA" button copies it.
 - **Other tokens use the HASH ticker**, on Solana and other chains. Only the contract address on https://hashcoin.app is Hashcoin's.
 
 ## The Windows app
@@ -118,6 +138,9 @@ Earnings depend on one ratio: daily trading volume divided by the number of GPUs
   - **Source code:** public at https://github.com/hashcoinapp/hashcoin.
   - **Built by GitHub, not on someone's PC:** every installer comes with a GitHub build attestation tying it to the exact public commit that built it (`gh attestation verify <installer> --repo hashcoinapp/hashcoin`).
   - **SHA-256 and VirusTotal:** each release lists its SHA-256 and a VirusTotal link.
+<!-- live -->
+- **Current installer:** version {{version}}, {{downloadUrl}}, SHA-256 `{{sha256}}`.
+<!-- /live -->
 - **If you're cautious:** the app needs no wallet keys, so you can run it on a PC or Windows account that holds no wallets.
 
 ## Safety
@@ -141,8 +164,8 @@ Earnings depend on one ratio: daily trading volume divided by the number of GPUs
 
 ## How to check
 
-- The token's supply, tax rate and authorities: on Solscan, from the contract address on the website (after launch).
-- Payouts: the website's public payout list with Solscan links (after launch).
+- The token's supply, tax rate and authorities: on Solscan, from the contract address on the website<!-- prelaunch --> (after launch)<!-- /prelaunch --><!-- live --> ({{solscan}})<!-- /live -->.
+- Payouts: the website's public payout list with Solscan links<!-- prelaunch --> (after launch)<!-- /prelaunch -->.
 - The installer: compare its SHA-256 with the one on the website, and check its GitHub build attestation.
 - The code: https://github.com/hashcoinapp/hashcoin (the payout engine is `packages/engine`).
 - The formula: the FAQ and the calculator on the website show the math.

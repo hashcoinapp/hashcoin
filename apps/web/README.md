@@ -1,6 +1,6 @@
 # Hashcoin website (`apps/web`)
 
-A static marketing site. Plain HTML, CSS and JavaScript with no framework and no wallet connection. The waitlist posts to the API (`services/api`) once `config.js` opens it; the download link, its SHA-256 and the contract address come from `config.js`. Live stats and the payout feed are still labeled placeholders.
+A static marketing site. Plain HTML, CSS and JavaScript with no framework and no wallet connection. The waitlist posts to the API (`services/api`) once `config.js` opens it; the download link, its SHA-256 and the contract address come from `config.js`. The site has two versions, **pre-launch** and **live**, switched by one setting (below).
 
 **Hosting:** Cloudflare Pages at https://hashcoin.app (root directory `apps/web`, build command `node scripts/build_pages.mjs`, output `dist`). `build_pages.mjs` copies only the public files into `dist/` and fails the build on a broken link, a wrong-domain og/canonical URL or bad token metadata. Setup and the launch checklist: `docs/HOSTING.md`.
 
@@ -26,6 +26,42 @@ Fonts (Manrope for headlines, labels and numbers, Inter for body text, IBM Plex 
 
 **Check it in a browser:** serve the folder on port 8123, then `node apps/web/scripts/check_site.mjs` (needs Playwright). It checks the hero fits the window, the flywheel caption never changes height, and there's no horizontal scroll or page error at six sizes from phone to 2560 wide, and saves screenshots to `.shots/`.
 
+## Pre-launch and live mode
+
+`mode` in `assets/js/config.js` picks the version: `"prelaunch"` (what hashcoin.app shows until launch: waitlist, countdown, "at launch") or `"live"`. One codebase serves both: `config.js` loads in each page's `<head>` and sets `<html data-mode>`, and CSS hides `[data-mode="live"]` parts in pre-launch and `[data-mode="prelaunch"]` parts in live mode, before the page paints.
+
+Live mode changes:
+- **Header:** "Buy $HASH" (Jupiter) instead of "Join the waitlist"; the "CA" button shows and copies the address.
+- **Hero:** Buy button, the contract address with a copy button, DexScreener / Birdeye / Solscan links.
+- **Launch tab becomes Live:** the address, buy and download, chart links, the launched timeline (launch curve, then graduation to a Meteora DAMM v2 pool, from the API's `market.phase`), the live payout numbers and every wallet we control.
+- **Live numbers** (`assets/js/live.js`): `<api>/v1/stats` every minute: the tax now, the last round's split, traded and paid in the last 24h, wallets, recent payout rounds with Solscan links. A 503 ("no payout rounds yet"), an error, a non-mainnet record or another mint shows a plain note and the Solscan link instead. "Paid in the last 24h, per wallet" by level shows only once the API publishes `levels24h` (`{ "1": { wallets, paidUsd }, "2": ..., "3": ... }`); `services/payouts/src/publish.ts` doesn't yet.
+- **Copy:** FAQ ("When did it launch?", "Where can I buy it?", the contract address, payouts, wallets), tokenomics (contract, wallets), the tax-pot simulation's note, the calculator's intro, footers. The risk text stays.
+- **`brief.md` and `llms.txt`:** `<!-- prelaunch -->…<!-- /prelaunch -->` and `<!-- live -->…<!-- /live -->` blocks; `build_pages.mjs` keeps the current mode's blocks and fills `{{ca}}`, `{{buy}}`, `{{launchDate}}`, `{{wallets}}` and the rest from `config.js`. The deployed copies never contain the markers.
+
+**Go live** (launch day, `docs/LAUNCH-RUNBOOK.md` step 16):
+
+```sh
+node apps/web/scripts/go_live.mjs --ca <mint> \
+  --wallet "Payout wallet=<address>=Collects the tax, pays miners and holders" \
+  --wallet "Dev wallet=<address>=The 1% dev bag. Gets no payouts" \
+  --wallet "Launch wallet=<address>"
+  # add --download-url <installer .exe> --download-version 0.1.3 --sha256 <64 hex> if download isn't set yet
+node apps/web/scripts/build_pages.mjs && python3 apps/web/scripts/build_standalone.py
+git add apps/web && git commit -m "Live mode: contract address" && git push
+```
+
+It checks every value (a real 32-byte Solana address, not the sample one; https links; a 64-hex SHA-256; an `.exe` installer; no wallet twice) and writes nothing if one is wrong. `--launched-at` defaults to now; buy and chart links are made from the address unless given (`--buy`, `--dexscreener`, `--birdeye`, `--solscan`). `--dry-run` prints the result; `--prelaunch` switches back. `build_pages.mjs` refuses live mode without `ca`, `download`, `launchAt` and `wallets`, and refuses any deployable build that contains the sample address.
+
+**Preview live mode without publishing it** (sample values from `scripts/live-sample.js`, an obviously fake address, and a banner saying so):
+
+```sh
+node apps/web/scripts/build_pages.mjs --live-preview --serve 8125     # dist-live/, http://localhost:8125
+python3 apps/web/scripts/build_standalone.py --live-preview           # standalone-live/
+python3 apps/web/scripts/artifact_page.py --live-preview              # .artifact-live/, for its own artifact
+```
+
+All three outputs are git-ignored; Cloudflare only builds `dist/` from `config.js`. Check them with `BASE=http://localhost:8125 node apps/web/scripts/check_site.mjs`. The live-mode preview is its own artifact (never the main preview link): https://claude.ai/artifact/ADBynEvLLt4CyZSio946K6
+
 ## Pages
 
 | File | What it is |
@@ -40,7 +76,10 @@ Fonts (Manrope for headlines, labels and numbers, Inter for body text, IBM Plex 
 |---|---|
 | `assets/css/site.css` | All styles. Design tokens are at the top (`--bg #0B0C0D`, `--gold #EBB447`, 8px radius), then the light theme. Gold used as text goes through `--gold-text-mix` so it darkens in light mode |
 | `assets/img/app-dark.jpg`, `app-light.jpg` | Screenshots of the miner app (`apps/desktop/ui`) with a sample wallet, shown on the Mining tab; the one matching the site theme shows. Retake them when the app changes |
-| `assets/js/config.js` | **Launch settings:** `site`, `api`, `launchAt`, `ca` (contract address), `waitlist` (opens the form), `download` (`url`, `version`, `sha256`), `x`, `discord`, `github`. Placeholders until set |
+| `assets/js/config.js` | **Launch settings:** `mode` (`prelaunch` or `live`), `site`, `api`, `launchAt`, `ca` (contract address), `waitlist` (opens the form), `download` (`url`, `version`, `sha256`), `links` (buy and chart links; made from `ca` when left out), `wallets` (every wallet we control, live mode), `x`, `discord`, `github`. Placeholders until set |
+| `assets/js/live.js` | Live mode, home page: the live payout numbers from `<api>/v1/stats` |
+| `scripts/go_live.mjs`, `scripts/site_config.mjs` | Launch day: fill `config.js` and switch to live mode; the shared settings checks |
+| `scripts/live-sample.js` | Made-up launch values for the live-mode preview (never deployed) |
 | `token/hash.json`, `token/hash.png` | Token metadata (`--uri` for the launch script) and its 512×512 logo |
 | `_headers`, `robots.txt`, `sitemap.xml`, `404.html`, `wrangler.toml` | Cloudflare Pages: security headers, crawlers, unknown URLs, project settings |
 | `scripts/build_pages.mjs`, `scripts/set_domain.mjs` | Build + check `dist/` for Cloudflare (`--serve` to preview it); move to another domain |
@@ -58,10 +97,10 @@ Fonts (Manrope for headlines, labels and numbers, Inter for body text, IBM Plex 
 ## At launch
 
 1. Set `launchAt` in `assets/js/config.js` when the date is decided. The countdown starts on its own.
-2. Set `ca` only when the token is live. The header "CA" button then copies it. Never before launch.
+2. The contract address only when the token is live, with `go_live.mjs` (above). Never before launch.
 3. Set the `x`, `discord` and `github` links. The X link also goes in `token/hash.json` (`twitter`, top level and in `extensions`); the build checks they match.
 4. `waitlist: true` once the API answers at `https://api.hashcoin.app/v1/health`; `download` when the release is published (the SHA-256 shows beside the button and on `antivirus.html#check`).
-5. Still placeholders: the payout feed and the wallet addresses in "Dev wallet transparency" (`docs/TECHNICAL-PLAN.md`, phases 3 and 4).
+5. Live mode lists payouts and wallets from the API and `config.js`. Still missing: the wallet page (wallet linking) the FAQ mentions, and `levels24h` in the API.
 6. The "Your PC" tab says mining only uses spare GPU power and your PC works like normal. That's the user's experience mining PRL; change the copy if another coin or miner the app uses behaves differently.
 
 ## Copy rules

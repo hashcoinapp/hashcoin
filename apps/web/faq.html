@@ -22,6 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script src="assets/js/config.js"></script>
 <script>try{if(localStorage.getItem("hc-theme")==="light")document.documentElement.dataset.theme="light"}catch(e){}</script>
 <link rel="stylesheet" href="assets/css/site.css">
 </head>
@@ -58,7 +59,8 @@
       <button class="ca-btn" type="button" data-ca aria-label="Contract address: published on this site at launch">
         <span>CA</span><b class="ca-value ca-long">At launch</b>
       </button>
-      <a class="btn btn-gold btn-sm" href="index.html#launch"><span class="hide-sm">Join the waitlist</span><span class="show-sm">Waitlist</span></a>
+      <a class="btn btn-gold btn-sm" href="index.html#launch" data-mode="prelaunch"><span class="hide-sm">Join the waitlist</span><span class="show-sm">Waitlist</span></a>
+      <a class="btn btn-gold btn-sm" href="index.html#launch" data-mode="live" data-link="buy"><span class="hide-sm">Buy $HASH</span><span class="show-sm">Buy</span></a>
       <button class="icon-btn menu-btn" type="button" aria-expanded="false" aria-controls="mobile-nav" aria-label="Menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
@@ -84,7 +86,7 @@
   <section class="page-head">
     <div class="wrap">
       <h1>FAQ</h1>
-      <p class="lede">Mining, payouts, levels, the token and safety. Hashcoin hasn't launched yet; where something is still being decided, we say so.</p>
+      <p class="lede">Mining, payouts, levels, the token and safety. <span data-mode="prelaunch">Hashcoin hasn't launched yet; where something is still being decided, we say so.</span><span data-mode="live">Where something is still being decided, we say so.</span></p>
     </div>
   </section>
 
@@ -114,7 +116,7 @@
             </details>
             <details>
               <summary>How do I start?</summary>
-              <div class="a"><p>Install the app, paste your public Solana address and press Start. The app detects your GPUs, the server picks a coin for each card, and the app downloads a hash-verified miner and runs it. The app isn't released yet; join the waitlist on the home page to hear when it is.</p></div>
+              <div class="a"><p>Install the app, paste your public Solana address and press Start. The app detects your GPUs, the server picks a coin for each card, and the app downloads a hash-verified miner and runs it. <span data-mode="prelaunch">The app isn't released yet; join the waitlist on the home page to hear when it is.</span><span data-mode="live"><a href="index.html#pc">Download it</a> from the home page and check its SHA-256.</span></p></div>
             </details>
             <details>
               <summary>Do I need a GPU?</summary>
@@ -124,9 +126,13 @@
               <summary>Why buy if I can just mine it?</summary>
               <div class="a"><p>Mining without a bag is paid in $HASH but gets no miner bonus. Your bag sets your level: $50 or more is Level 1, which earns holder rewards and the 1× bonus; Level 2 doubles both and Level 3 quadruples them. Mined $HASH counts toward your bag, so mining fills it slowly; buying gets you to the higher levels sooner.</p></div>
             </details>
-            <details>
+            <details data-mode="prelaunch">
               <summary>When does it launch?</summary>
               <div class="a"><p>When the app and payouts are proven end to end: a devnet test of the tax, the split and payouts, a private test on real GPUs, and an unedited install-to-first-payout video. The date will appear in the countdown on the home page. No $HASH token exists yet.</p></div>
+            </details>
+            <details data-mode="live">
+              <summary>When did it launch?</summary>
+              <div class="a"><p>On <span data-launch-date>launch day</span>, on a Meteora bonding curve. When the curve fills, it moves to a Meteora DAMM v2 pool (graduation) and the tax formula starts. Until then the tax is 5%.</p></div>
             </details>
           </div>
         </section>
@@ -182,7 +188,7 @@
             </details>
             <details>
               <summary>Can I check payouts myself?</summary>
-              <div class="a"><p>Yes. Every payout is a Solana transaction. After launch the site lists them live with Solscan links, along with what each level was paid in the last 24 hours.</p></div>
+              <div class="a"><p>Yes. Every payout is a Solana transaction.<span data-mode="prelaunch"> After launch the site lists them live with Solscan links, along with what each level was paid in the last 24 hours.</span><span data-mode="live"> The <a href="index.html#launch">Live</a> tab on the home page lists recent payouts with Solscan links.</span></p></div>
             </details>
           </div>
         </section>
@@ -247,7 +253,7 @@
                 <tr><td>Tax</td><td>2–5% on every transfer, set by a public formula: 5–10% of it to development, 45–75% to miners (what reaches 5× their mining), the rest to holders (at least 1% of every trade). No burn</td></tr>
                 <tr><td>Tax authority</td><td>Nobody can change it on the launch curve, where it's fixed at 5%. After graduation, a 2-of-3 multisig. The rate only moves within 2–5% by the published formula, and every change shows on-chain about 4 days before it applies</td></tr>
                 <tr><td>Dev holding</td><td>1% of supply, bought openly at launch into one public wallet. Not locked. Gets no miner or holder payouts</td></tr>
-                <tr><td>Contract address</td><td>Published on this site first, at launch</td></tr>
+                <tr><td>Contract address</td><td><span data-mode="prelaunch">Published on this site first, at launch</span><span data-mode="live"><code class="sha" data-ca-text></code></span></td></tr>
               </tbody>
             </table>
           </div>
@@ -260,13 +266,21 @@
               <summary>Do your own payouts pay the tax?</summary>
               <div class="a"><p>Yes. We send a little extra so you receive the full amount, and the tax we pay flows back to the treasury.</p></div>
             </details>
-            <details>
+            <details data-mode="prelaunch">
               <summary>Which launchpad or exchange will it be on?</summary>
               <div class="a"><p>Most likely Meteora's launchpad, which now supports a token tax like ours. If that isn't ready in time, our own token with a Raydium or Orca pool. Either way, any Solana wallet and aggregator such as Jupiter can trade it, and the tax applies everywhere.</p></div>
             </details>
-            <details>
+            <details data-mode="live">
+              <summary>Where can I buy it?</summary>
+              <div class="a"><p>It launched on a Meteora bonding curve and moves to a Meteora DAMM v2 pool when the curve fills. Any Solana wallet or aggregator can trade it, such as <a href="#" data-link="buy">Jupiter</a>, and the tax applies everywhere. Check the quote before you swap: some routes handle a token tax less well.</p></div>
+            </details>
+            <details data-mode="prelaunch">
               <summary>How do I know the contract address is real?</summary>
               <div class="a"><p>It appears here first, at launch, and the header's "CA" button copies it. Any address posted before that, or anywhere that doesn't match this site, is not ours.</p></div>
+            </details>
+            <details data-mode="live">
+              <summary>How do I know the contract address is real?</summary>
+              <div class="a"><p>It's <code class="sha" data-ca-text></code>, posted here first. The header's "CA" button copies it. Any other address is not ours.</p></div>
             </details>
           </div>
         </section>
@@ -292,7 +306,7 @@
             </details>
             <details>
               <summary>Where is the money held?</summary>
-              <div class="a"><p>The tax is collected and paid out every round by our payout wallet, so it only holds what's waiting to be paid. Control of the tax rate sits with a 2-of-3 multisig from graduation on. Every wallet we control will be listed on the home page at launch.</p></div>
+              <div class="a"><p>The tax is collected and paid out every round by our payout wallet, so it only holds what's waiting to be paid. Control of the tax rate sits with a 2-of-3 multisig from graduation on. <span data-mode="prelaunch">Every wallet we control will be listed on the home page at launch.</span><span data-mode="live">Every wallet we control is listed under <a href="index.html#launch">Live</a> on the home page.</span></p></div>
             </details>
           </div>
         </section>
@@ -325,7 +339,7 @@
         <p>Your GPU mines, buys $HASH and pays you. A 2–5% tax pays miners and holders.</p>
       </div>
       <div><h4>Product</h4><ul><li><a href="index.html#how">How it works</a></li><li><a href="calculator.html">Calculator</a></li><li><a href="index.html#levels">Levels</a></li><li><a href="index.html#pc">Mining</a></li></ul></div>
-      <div><h4>Info</h4><ul><li><a href="faq.html">FAQ</a></li><li><a href="antivirus.html">Antivirus help</a></li><li><a href="index.html#token">Tokenomics</a></li><li><a href="index.html#launch">Status</a></li><li><a href="index.html#launch">Waitlist</a></li></ul></div>
+      <div><h4>Info</h4><ul><li><a href="faq.html">FAQ</a></li><li><a href="antivirus.html">Antivirus help</a></li><li><a href="index.html#token">Tokenomics</a></li><li><a href="index.html#launch"><span data-mode="prelaunch">Status</span><span data-mode="live">Live numbers</span></a></li><li data-mode="prelaunch"><a href="index.html#launch">Waitlist</a></li><li data-mode="live"><a href="index.html#launch" data-link="buy">Buy $HASH</a></li></ul></div>
       <div><h4>Community</h4><ul>
         <li><a href="#" data-social="x" data-soon="Our X account goes live closer to launch.">X (soon)</a></li>
         <li><a href="#" data-social="discord" data-soon="The Discord opens closer to launch.">Discord (soon)</a></li>
@@ -335,12 +349,11 @@
     <div class="disclaimer">
       <p><b>Risk.</b> $HASH is a new, highly volatile token and can lose most or all of its value. Payouts depend on trading volume, the number of miners, coin prices and pool results, and can fall to near zero. Mining uses electricity and adds heat and wear to your hardware. Scenario figures on this site are illustrations, not forecasts or promises. Nothing here is financial, investment, tax or legal advice. Check the rules where you live.</p>
       <p><b>Security.</b> We will never ask for your seed phrase or private key. The contract address is published only on this site.</p>
-      <p>© 2026 Hashcoin. Pre-launch preview.</p>
+      <p>© 2026 Hashcoin.<span data-mode="prelaunch"> Pre-launch preview.</span></p>
     </div>
   </div>
 </footer>
 
-<script src="assets/js/config.js"></script>
 <script src="assets/js/site.js"></script>
 </body>
 </html>

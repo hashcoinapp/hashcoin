@@ -95,6 +95,54 @@
   $$("[data-ca-full]").forEach((el) => {
     if (CFG.ca) { el.textContent = CFG.ca; el.hidden = false; }
   });
+  $$("[data-ca-text]").forEach((el) => (el.textContent = CFG.ca || ""));
+
+  // ---------- Live mode: buy and chart links, launch date, our wallets ----------
+  // Links left out of config.js are made from the contract address (same rule as scripts/site_config.mjs).
+  const ca = CFG.ca;
+  const links = Object.assign(ca ? {
+    buy: "https://jup.ag/swap?sell=So11111111111111111111111111111111111111112&buy=" + ca,
+    dexscreener: "https://dexscreener.com/solana/" + ca,
+    birdeye: "https://birdeye.so/token/" + ca + "?chain=solana",
+    solscan: "https://solscan.io/token/" + ca,
+  } : {}, ...Object.entries(CFG.links || {}).filter(([, v]) => v).map(([k, v]) => ({ [k]: v })));
+  window.hcLinks = links;
+  $$("[data-link]").forEach((a) => {
+    const url = links[a.dataset.link];
+    if (!url || !/^https:\/\//.test(url)) return;
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener";
+  });
+  if (CFG.launchAt && !isNaN(Date.parse(CFG.launchAt))) {
+    const day = new Date(CFG.launchAt).toLocaleDateString(undefined, { dateStyle: "medium" });
+    $$("[data-launch-date]").forEach((el) => (el.textContent = day));
+  }
+  $$("[data-wallets]").forEach((ul) => {
+    (CFG.wallets || []).forEach((w) => {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.href = "https://solscan.io/account/" + encodeURIComponent(w.address);
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.className = "sha";
+      a.textContent = w.address;
+      const b = document.createElement("b");
+      b.textContent = w.label;
+      li.append(b);
+      if (w.note) { const s = document.createElement("span"); s.textContent = w.note; li.append(s); }
+      li.append(a);
+      ul.append(li);
+    });
+  });
+
+  // Live-mode preview (scripts/live-sample.js only): say plainly that the values are made up.
+  if (CFG.preview) {
+    const bar = document.createElement("p");
+    bar.className = "preview-bar";
+    bar.textContent = CFG.preview;
+    document.body.append(bar);
+  }
 
   // ---------- Download ----------
   // Only an https link with a 64-character SHA-256 counts: the checksum must always sit beside the link.

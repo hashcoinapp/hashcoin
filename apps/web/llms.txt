@@ -1,6 +1,6 @@
 # Hashcoin ($HASH)
 
-> A Solana token (Token-2022) with a 2–5% tax on every trade, paid back out to holders and to people who mine with the Hashcoin Windows app. The app mines whichever coin pays a GPU the most; the platform sells it and buys $HASH on the market to pay miners. Pre-launch (October 2026). The contract address is published only on hashcoin.app, at launch.
+> A Solana token (Token-2022) with a 2–5% tax on every trade, paid back out to holders and to people who mine with the Hashcoin Windows app. The app mines whichever coin pays a GPU the most; the platform sells it and buys $HASH on the market to pay miners. <!-- prelaunch -->Pre-launch (October 2026). The contract address is published only on hashcoin.app, at launch.<!-- /prelaunch --><!-- live -->Live since {{launchDate}}. Contract address: {{ca}} (check it matches hashcoin.app).<!-- /live -->
 
 ## Docs
 
@@ -12,6 +12,12 @@
 ## Links
 
 - [Website](https://hashcoin.app)
+<!-- live -->
+- [Buy on Jupiter]({{buy}})
+- [DexScreener]({{dexscreener}})
+- [Solscan]({{solscan}}): the token, its supply, tax and authorities.
+- [Live payouts](https://api.hashcoin.app/v1/stats): the payout record (JSON).
+<!-- /live -->
 - [X](https://x.com/HashcoinSOL)
 - [Discord](https://discord.gg/XVYCbKD7mA)
 - [Source code](https://github.com/hashcoinapp/hashcoin): the app, payout engine, server and website. Installers are built by GitHub Actions with build attestations.

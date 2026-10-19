@@ -22,6 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script src="assets/js/config.js"></script>
 <script>try{if(localStorage.getItem("hc-theme")==="light")document.documentElement.dataset.theme="light"}catch(e){}</script>
 <link rel="stylesheet" href="assets/css/site.css">
 </head>
@@ -58,7 +59,8 @@
       <button class="ca-btn" type="button" data-ca aria-label="Contract address: published on this site at launch">
         <span>CA</span><b class="ca-value ca-long">At launch</b>
       </button>
-      <a class="btn btn-gold btn-sm" href="index.html#launch"><span class="hide-sm">Join the waitlist</span><span class="show-sm">Waitlist</span></a>
+      <a class="btn btn-gold btn-sm" href="index.html#launch" data-mode="prelaunch"><span class="hide-sm">Join the waitlist</span><span class="show-sm">Waitlist</span></a>
+      <a class="btn btn-gold btn-sm" href="index.html#launch" data-mode="live" data-link="buy"><span class="hide-sm">Buy $HASH</span><span class="show-sm">Buy</span></a>
       <button class="icon-btn menu-btn" type="button" aria-expanded="false" aria-controls="mobile-nav" aria-label="Menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
@@ -238,7 +240,7 @@
         <p>Your GPU mines, buys $HASH and pays you. A 2–5% tax pays miners and holders.</p>
       </div>
       <div><h4>Product</h4><ul><li><a href="index.html#how">How it works</a></li><li><a href="calculator.html">Calculator</a></li><li><a href="index.html#levels">Levels</a></li><li><a href="index.html#pc">Mining</a></li></ul></div>
-      <div><h4>Info</h4><ul><li><a href="faq.html">FAQ</a></li><li><a href="antivirus.html">Antivirus help</a></li><li><a href="index.html#token">Tokenomics</a></li><li><a href="index.html#launch">Status</a></li><li><a href="index.html#launch">Waitlist</a></li></ul></div>
+      <div><h4>Info</h4><ul><li><a href="faq.html">FAQ</a></li><li><a href="antivirus.html">Antivirus help</a></li><li><a href="index.html#token">Tokenomics</a></li><li><a href="index.html#launch"><span data-mode="prelaunch">Status</span><span data-mode="live">Live numbers</span></a></li><li data-mode="prelaunch"><a href="index.html#launch">Waitlist</a></li><li data-mode="live"><a href="index.html#launch" data-link="buy">Buy $HASH</a></li></ul></div>
       <div><h4>Community</h4><ul>
         <li><a href="#" data-social="x" data-soon="Our X account goes live closer to launch.">X (soon)</a></li>
         <li><a href="#" data-social="discord" data-soon="The Discord opens closer to launch.">Discord (soon)</a></li>
@@ -248,12 +250,11 @@
     <div class="disclaimer">
       <p><b>Risk.</b> $HASH is a new, highly volatile token and can lose most or all of its value. Payouts depend on trading volume, the number of miners, coin prices and pool results, and can fall to near zero. Mining uses electricity and adds heat and wear to your hardware. Scenario figures on this site are illustrations, not forecasts or promises. Nothing here is financial, investment, tax or legal advice. Check the rules where you live.</p>
       <p><b>Security.</b> We will never ask for your seed phrase or private key. The contract address is published only on this site.</p>
-      <p>© 2026 Hashcoin. Pre-launch preview.</p>
+      <p>© 2026 Hashcoin.<span data-mode="prelaunch"> Pre-launch preview.</span></p>
     </div>
   </div>
 </footer>
 
-<script src="assets/js/config.js"></script>
 <script src="assets/js/site.js"></script>
 </body>
 </html>

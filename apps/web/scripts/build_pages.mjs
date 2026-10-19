@@ -6,36 +6,34 @@
 //   node apps/web/scripts/build_pages.mjs            build + check (Cloudflare runs this)
 //   node apps/web/scripts/build_pages.mjs --serve    then serve dist/ on http://localhost:8124 the way
 //                                                    Cloudflare does (headers, /faq for faq.html, 404 page)
+//   node apps/web/scripts/build_pages.mjs --live-preview [--serve]
+//                                                    live mode with made-up sample values (scripts/live-sample.js),
+//                                                    built into dist-live/ instead (never deployed)
+//
+// config.js `mode` picks the site's version: "prelaunch" or "live". The pages switch by themselves
+// ([data-mode] parts); brief.md and llms.txt keep their <!-- prelaunch --> or <!-- live --> blocks here,
+// with {{ca}}, {{buy}}, ... filled from config.js.
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { dirname, extname, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import vm from "node:vm";
+import { CONFIG, SAMPLE_CA, WEB, checkConfig, linksFor, loadConfig } from "./site_config.mjs";
 
-const WEB = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const DIST = join(WEB, "dist");
+const PREVIEW = process.argv.includes("--live-preview");
+const DIST = join(WEB, PREVIEW ? "dist-live" : "dist");
 const PAGES = ["index.html", "calculator.html", "faq.html", "antivirus.html", "404.html"];
 const COPY = ["assets", "brand/logo", "token", "robots.txt", "sitemap.xml", "_headers", "llms.txt", "brief.md"];
 const errors = [];
 const fail = (msg) => errors.push(msg);
 
 // ---------- Settings from config.js ----------
-const sandbox = { window: {} };
-vm.runInNewContext(readFileSync(join(WEB, "assets/js/config.js"), "utf8"), sandbox);
-const cfg = sandbox.window.HASHCOIN;
+const configText = readFileSync(CONFIG, "utf8");
+// The real settings are always checked, also for a preview build.
+for (const e of checkConfig(loadConfig(configText).cfg)) fail(`config.js ${e}`);
+const sampleText = PREVIEW ? readFileSync(join(WEB, "scripts/live-sample.js"), "utf8") : "";
+const { cfg } = PREVIEW ? loadConfig(configText, sampleText) : loadConfig(configText);
+if (PREVIEW) for (const e of checkConfig(cfg, { sample: true })) fail(`live sample: ${e}`);
 const site = String(cfg.site ?? "").replace(/\/$/, "");
 const api = String(cfg.api ?? "").replace(/\/$/, "");
-if (!/^https:\/\/[a-z0-9.-]+$/.test(site)) fail(`config.js site must be https://<domain> (got ${cfg.site})`);
-if (api && !/^https:\/\/[a-z0-9.-]+$/.test(api)) fail(`config.js api must be https://<host> (got ${cfg.api})`);
-if (cfg.ca != null && !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(cfg.ca)) fail("config.js ca is not a Solana address");
-if (cfg.download != null) {
-  const d = cfg.download;
-  if (!/^https:\/\//.test(d.url ?? "")) fail("config.js download.url must be an https link");
-  if (!/^[0-9a-fA-F]{64}$/.test(d.sha256 ?? "")) fail("config.js download.sha256 must be the installer's 64-character SHA-256");
-}
-for (const k of ["x", "discord", "github"]) {
-  if (cfg[k] != null && !/^https:\/\//.test(cfg[k])) fail(`config.js ${k} must be an https link or null`);
-}
 
 // ---------- Copy ----------
 rmSync(DIST, { recursive: true, force: true });
@@ -46,8 +44,39 @@ for (const p of COPY) {
 }
 // Browsers and crawlers ask for /favicon.ico whatever the page says.
 cpSync(join(WEB, "brand/logo/favicon.ico"), join(DIST, "favicon.ico"));
+// The preview's sample values go after the real settings, in dist-live/ only.
+if (PREVIEW) writeFileSync(join(DIST, "assets/js/config.js"), configText + "\n" + sampleText);
+
+// brief.md and llms.txt: keep this mode's blocks and fill in the launch values.
+const live = cfg.mode === "live";
+const L = linksFor(cfg);
+const values = {
+  ca: cfg.ca, launchDate: cfg.launchAt ? new Date(cfg.launchAt).toLocaleDateString("en-US", { dateStyle: "long", timeZone: "UTC" }) : null,
+  buy: L.buy, dexscreener: L.dexscreener, birdeye: L.birdeye, solscan: L.solscan,
+  version: cfg.download?.version, downloadUrl: cfg.download?.url, sha256: cfg.download?.sha256?.toLowerCase(),
+  wallets: (cfg.wallets ?? []).map((w) => `  - ${w.label}${w.note ? ` (${w.note})` : ""}: ${w.address}`).join("\n"),
+};
+function renderMode(file) {
+  let t = readFileSync(join(WEB, file), "utf8");
+  t = t.replace(/^<!-- Mode blocks:.*-->\n/m, "");
+  const [keep, drop] = live ? ["live", "prelaunch"] : ["prelaunch", "live"];
+  // Blocks on lines of their own first (their line breaks go too), then ones inside a line.
+  t = t.replace(new RegExp(`^<!-- ${drop} -->\\n[\\s\\S]*?^<!-- /${drop} -->\\n`, "gm"), "");
+  t = t.replace(new RegExp(`<!-- ${drop} -->[\\s\\S]*?<!-- /${drop} -->`, "g"), "");
+  t = t.replace(new RegExp(`^<!-- /?${keep} -->\\n`, "gm"), "");
+  t = t.replace(new RegExp(`<!-- /?${keep} -->`, "g"), "");
+  t = t.replace(/\{\{(\w+)\}\}/g, (m, k) => {
+    if (values[k] == null || values[k] === "") { fail(`${file}: {{${k}}} has no value in config.js`); return m; }
+    return values[k];
+  });
+  if (/<!--/.test(t)) fail(`${file}: a mode block isn't closed`);
+  writeFileSync(join(DIST, file), t);
+}
+renderMode("brief.md");
+renderMode("llms.txt");
 
 // ---------- Checks ----------
+function files(d) { return readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? files(join(d, e.name)) : [join(d, e.name)]); }
 const inDist = (p) => existsSync(join(DIST, p)) && statSync(join(DIST, p)).isFile();
 for (const page of PAGES) {
   const html = readFileSync(join(DIST, page), "utf8");
@@ -64,6 +93,13 @@ for (const page of PAGES) {
     if (prop === "og:image" && !inDist(url.slice(site.length + 1))) fail(`${page}: og:image ${url} is not in the deployed files`);
   }
   if (!/<link rel="canonical"/.test(html)) fail(`${page}: no canonical link`);
+}
+
+// The preview's made-up address must never reach a deployable build.
+if (!PREVIEW) {
+  for (const f of files(DIST).filter((f) => /\.(html|js|md|txt|json)$/.test(f))) {
+    if (readFileSync(f, "utf8").includes(SAMPLE_CA)) fail(`${relative(DIST, f)} contains the preview's sample address`);
+  }
 }
 
 const robots = readFileSync(join(DIST, "robots.txt"), "utf8");
@@ -95,8 +131,7 @@ if (errors.length) {
   console.error(`build_pages: ${errors.length} problem(s):\n- ` + errors.join("\n- "));
   process.exit(1);
 }
-const files = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? files(join(d, e.name)) : [e.name]);
-console.log(`build_pages: dist/ ready (${files(DIST).length} files) for ${site}, API ${api || "none"}`);
+console.log(`build_pages: ${PREVIEW ? "dist-live/ (live-mode preview, sample values)" : "dist/"} ready (${files(DIST).length} files) for ${site}, ${cfg.mode} mode, API ${api || "none"}`);
 
 // ---------- Local preview, Cloudflare-style ----------
 if (process.argv.includes("--serve")) {
@@ -119,5 +154,5 @@ if (process.argv.includes("--serve")) {
     const body = readFileSync(join(DIST, ok ? file : "404.html"));
     res.writeHead(ok ? 200 : 404, { "content-type": types[extname(ok ? file : "x.html")] ?? "application/octet-stream" });
     res.end(body);
-  }).listen(port, "127.0.0.1", () => console.log(`serving dist/ on http://localhost:${port}`));
+  }).listen(port, "127.0.0.1", () => console.log(`serving ${PREVIEW ? "dist-live" : "dist"}/ on http://localhost:${port}`));
 }

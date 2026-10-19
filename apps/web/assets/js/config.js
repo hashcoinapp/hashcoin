@@ -1,6 +1,11 @@
 // Site settings. Anything left null shows a clearly labeled placeholder.
 // After a change: commit and push; Cloudflare Pages redeploys the site by itself (docs/HOSTING.md).
+// Launch day: `node apps/web/scripts/go_live.mjs --ca <mint> ...` fills the launch values below and
+// switches `mode` to "live" (see apps/web/README.md). Loaded in each page's <head>.
 window.HASHCOIN = Object.assign({
+  // "prelaunch" (waitlist, countdown, "at launch") or "live" (contract address, buy and chart
+  // links, live payout numbers). Pages show [data-mode="prelaunch"] or [data-mode="live"] parts.
+  mode: "prelaunch",
   // The site's own address, no trailing slash. The same domain is in the pages' <head>, robots.txt,
   // sitemap.xml and token/hash.json; change it everywhere with `node apps/web/scripts/set_domain.mjs <domain>`.
   site: "https://hashcoin.app",
@@ -17,8 +22,13 @@ window.HASHCOIN = Object.assign({
   // { url: "https://github.com/<owner>/<repo>/releases/download/desktop-v0.1.0/HashcoinMiner-0.1.0-setup.exe",
   //   version: "0.1.0", sha256: "<64 hex characters from the release's SHA256SUMS.txt>" }
   download: null,
+  // Live mode: buy and chart links. Any left out are made from `ca`: Jupiter, DexScreener, Birdeye, Solscan.
+  links: null,
+  // Live mode: every wallet we control, listed on the home page. [{ label: "Payout wallet", address: "..." }]
+  wallets: [],
   // Social links. null shows "coming soon".
   x: "https://x.com/HashcoinSOL",
   discord: "https://discord.gg/XVYCbKD7mA",
   github: "https://github.com/hashcoinapp/hashcoin",
 }, window.HASHCOIN || {});
+document.documentElement.dataset.mode = window.HASHCOIN.mode === "live" ? "live" : "prelaunch";
