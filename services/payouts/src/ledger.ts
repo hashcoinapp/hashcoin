@@ -1,7 +1,7 @@
 // What the payout loop remembers between rounds. A JSON file for the devnet rehearsal; Postgres
 // later (docs/TECHNICAL-PLAN.md, Phase 3). Token amounts are base units, stored as strings.
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { levelPriceUsd, type PendingRecord, type WalletState } from "@hashcoin/engine";
+import { type HolderLevel, levelPriceUsd, type PendingRecord, type WalletState } from "@hashcoin/engine";
 
 /** A payout that failed to send (or couldn't be bought); paid first next round. */
 export interface Owed {
@@ -20,6 +20,8 @@ export interface Owed {
   taxTokens?: string;
   /** Sent in this transaction, not yet confirmed: checked on chain before it is paid again (inflight.ts). */
   inFlight?: { signature: string; lastValidBlockHeight: number };
+  /** Miner and holder payouts: the wallet's holder level (0-3) when the payout was planned (the public per-level table). */
+  level?: HolderLevel;
 }
 
 /**
@@ -121,6 +123,12 @@ export interface Ledger {
   /** Spot price samples (USD per token) for the level price: the higher of the 1h and 7-day averages. */
   prices: { at: number; usd: number }[];
   days: Record<string, DayStats>;
+  /**
+   * The bonus and holder rewards paid today (UTC), per holder level ("1"-"3") and wallet, in USD as
+   * planned: the public "paid in the last 24h, per level" table. Only today is kept. Missing in
+   * ledgers before Oct 18, and until a level 1+ wallet is paid: no data.
+   */
+  levelPaid?: { day: string; levels: Record<string, Record<string, number>> };
   /** `proposed`: sent to the multisig for signing rather than sent by us. */
   rateChanges: { at: number; bps: number; effectiveEpoch?: number; reason: string; signature?: string; proposed?: string }[];
   paid: Record<string, { miner: string; holder: string }>;

@@ -280,6 +280,90 @@ describe("round", () => {
   });
 });
 
+describe("paid per level, last 24h (public record)", () => {
+  const estimate = { mode: "estimate" as const, minAgeMs: 6 * HOUR_MS, budgetUsd: 0, ratio: 1 };
+  const base = { roundId: "r1", rateBps: 500, price, levelPrice: price, rules: DEFAULT_RULES, excluded: new Set([...platform, POOL]), dev: DEV, payHolders: true, floatAvailableUsd: 1e9, settlement: estimate, minHolderPayoutUsd: 0.0001 };
+  const commitX = (now: number, taxTokens: bigint) => ({ now, taxTokens, decimals: 6, settlementMode: "estimate" as const });
+  const toTokens = (usd: number) => T(usd / 0.05);
+  const record = (l: ReturnType<typeof fresh>, now: number) =>
+    publicRecord(l, { now, price, rules: DEFAULT_RULES, excluded: platform, explorer: (s) => s, rate: { bps: 500 }, rounds: [] }).levels24h;
+
+  // Alice holds $1,000 (L2), Bob $3,000 (L3); the miner holds $100 (L1) and mined $1.
+  function ledger() {
+    const l = fresh();
+    indexTransactions(l, [
+      tx(t0 - 2 * 24 * HOUR_MS, [POOL, -20_000], [ALICE, 20_000]),
+      tx(t0 - 2 * 24 * HOUR_MS + 1, [POOL, -60_000], [BOB, 60_000]),
+      tx(t0 - 2 * 24 * HOUR_MS + 2, [POOL, -2_000], [MINER, 2_000]),
+    ], { price, rules: DEFAULT_RULES, platform });
+    l.minedSinceRound[MINER] = 1;
+    l.hoursInWindow[MINER] = 3;
+    return l;
+  }
+
+  it("counts each level's wallets and their bonus and holder rewards, not bought mining or dev", () => {
+    const l = ledger();
+    expect(record(l, t0)).toBeNull(); // no tally yet (and ledgers from before Oct 18): the site hides the table
+    const plan = planRound({ ...base, ledger: l, now: t0, taxTokens: T(200) });
+    const miner = plan.payouts.find((p) => p.kind === "miner")!;
+    const minerHolder = plan.payouts.find((p) => p.kind === "holder" && p.address === MINER)!;
+    const alice = plan.payouts.find((p) => p.address === ALICE)!;
+    const bob = plan.payouts.find((p) => p.address === BOB)!;
+    expect([miner.level, minerHolder.level, alice.level, bob.level]).toEqual([1, 1, 2, 3]);
+    const amounts = plan.payouts.map((p) => toTokens(p.usd));
+    commitRound(l, plan, commitX(t0, T(200)), amounts, amounts);
+    const lv = record(l, t0)!;
+    expect(lv["1"].wallets).toBe(1); // the miner, paid both a bonus and a holder reward
+    expect(lv["1"].paidUsd).toBeCloseTo(miner.usd - miner.buyUsd! + minerHolder.usd, 9);
+    expect(lv["2"]).toEqual({ wallets: 1, paidUsd: alice.usd });
+    expect(lv["3"]).toEqual({ wallets: 1, paidUsd: bob.usd });
+    // A second round the same day adds up per wallet.
+    l.minedSinceRound[MINER] = 1;
+    const next = planRound({ ...base, ledger: l, now: t0 + HOUR_MS, taxTokens: T(200) });
+    const a2 = next.payouts.map((p) => toTokens(p.usd));
+    commitRound(l, next, commitX(t0 + HOUR_MS, T(200)), a2, a2);
+    expect(record(l, t0 + HOUR_MS)!["2"]).toEqual({ wallets: 1, paidUsd: alice.usd + next.payouts.find((p) => p.address === ALICE)!.usd });
+    // The next UTC day starts empty (like last24h); the ledger keeps only today.
+    const tomorrow = Date.UTC(2026, 9, 6, 0, 30);
+    expect(record(l, tomorrow)).toEqual({ "1": { wallets: 0, paidUsd: 0 }, "2": { wallets: 0, paidUsd: 0 }, "3": { wallets: 0, paidUsd: 0 } });
+    l.minedSinceRound[MINER] = 1;
+    const third = planRound({ ...base, ledger: l, now: tomorrow, taxTokens: T(200) });
+    const a3 = third.payouts.map((p) => toTokens(p.usd));
+    commitRound(l, third, commitX(tomorrow, T(200)), a3, a3);
+    expect(l.levelPaid!.day).toBe(dayKey(tomorrow));
+    expect(record(l, tomorrow)!["3"]).toEqual({ wallets: 1, paidUsd: third.payouts.find((p) => p.address === BOB)!.usd });
+  });
+
+  it("a payout that failed counts once, when its retry lands, at its planned level", () => {
+    const l = ledger();
+    const plan = planRound({ ...base, ledger: l, now: t0, taxTokens: T(200) });
+    const amounts = plan.payouts.map((p) => toTokens(p.usd));
+    const bobUsd = plan.payouts.find((p) => p.address === BOB)!.usd;
+    // Bob's transaction fails; the ledger is saved (write-ahead) and reloaded after a "crash".
+    commitRound(l, plan, commitX(t0, T(200)), amounts, plan.payouts.map((p, i) => (p.address === BOB ? undefined : amounts[i])));
+    const reloaded = JSON.parse(JSON.stringify(l)) as typeof l;
+    expect(record(reloaded, t0)!["3"]).toEqual({ wallets: 0, paidUsd: 0 });
+    expect(reloaded.owed[0]!.level).toBe(3);
+    const later = t0 + HOUR_MS;
+    const next = planRound({ ...base, ledger: reloaded, now: later, taxTokens: 0n, payHolders: false });
+    commitRound(reloaded, next, commitX(later, 0n), next.payouts.map(() => 1n), next.payouts.map(() => 1n));
+    expect(record(reloaded, later)!["3"]).toEqual({ wallets: 1, paidUsd: bobUsd });
+    // Recording the same landed payout again (a restart's on-chain check) doesn't count it twice.
+    recordSent(reloaded, plan.payouts[0]!, 1n, { now: later, decimals: 6 });
+    expect(record(reloaded, later)!["3"]).toEqual({ wallets: 1, paidUsd: bobUsd });
+  });
+
+  it("a miner with no qualified bag isn't in the table", () => {
+    const l = fresh();
+    l.minedSinceRound[MINER] = 1;
+    const plan = planRound({ ...base, ledger: l, now: t0, taxTokens: T(200) });
+    expect(plan.payouts.find((p) => p.kind === "miner")!.level).toBe(0);
+    const amounts = plan.payouts.map((p) => toTokens(p.usd));
+    commitRound(l, plan, commitX(t0, T(200)), amounts, amounts);
+    expect(record(l, t0)).toBeNull();
+  });
+});
+
 describe("indexer: our own buys and the graduation", () => {
   it("a market buy by the treasury isn't trading volume, and its withheld fee goes back to the treasury", () => {
     const l = fresh();

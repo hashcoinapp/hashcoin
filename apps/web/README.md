@@ -34,7 +34,7 @@ Live mode changes:
 - **Header:** "Buy $HASH" (Jupiter) instead of "Join the waitlist"; the "CA" button shows and copies the address.
 - **Hero:** Buy button, the contract address with a copy button, DexScreener / Birdeye / Solscan links.
 - **Launch tab becomes Live:** the address, buy and download, chart links, the launched timeline (launch curve, then graduation to a Meteora DAMM v2 pool, from the API's `market.phase`), the live payout numbers and every wallet we control.
-- **Live numbers** (`assets/js/live.js`): `<api>/v1/stats` every minute: the tax now, the last round's split, traded and paid in the last 24h, wallets, recent payout rounds with Solscan links. A 503 ("no payout rounds yet"), an error, a non-mainnet record or another mint shows a plain note and the Solscan link instead. "Paid in the last 24h, per wallet" by level shows only once the API publishes `levels24h` (`{ "1": { wallets, paidUsd }, "2": ..., "3": ... }`); `services/payouts/src/publish.ts` doesn't yet.
+- **Live numbers** (`assets/js/live.js`): `<api>/v1/stats` every minute: the tax now, the last round's split, traded and paid in the last 24h, wallets, recent payout rounds with Solscan links. A 503 ("no payout rounds yet"), an error, a non-mainnet record or another mint shows a plain note and the Solscan link instead. "Paid in the last 24h, per wallet" by level shows only once the API publishes `levels24h` (`{ "1": { wallets, paidUsd }, "2": ..., "3": ... }`); `services/payouts/src/publish.ts` publishes it from Oct 18: bonus and holder rewards paid today (UTC), per level; `null` until a level 1+ wallet is paid.
 - **Copy:** FAQ ("When did it launch?", "Where can I buy it?", the contract address, payouts, wallets), tokenomics (contract, wallets), the tax-pot simulation's note, the calculator's intro, footers. The risk text stays.
 - **`brief.md` and `llms.txt`:** `<!-- prelaunch -->…<!-- /prelaunch -->` and `<!-- live -->…<!-- /live -->` blocks; `build_pages.mjs` keeps the current mode's blocks and fills `{{ca}}`, `{{buy}}`, `{{launchDate}}`, `{{wallets}}` and the rest from `config.js`. The deployed copies never contain the markers.
 
@@ -100,7 +100,7 @@ All three outputs are git-ignored; Cloudflare only builds `dist/` from `config.j
 2. The contract address only when the token is live, with `go_live.mjs` (above). Never before launch.
 3. Set the `x`, `discord` and `github` links. The X link also goes in `token/hash.json` (`twitter`, top level and in `extensions`); the build checks they match.
 4. `waitlist: true` once the API answers at `https://api.hashcoin.app/v1/health`; `download` when the release is published (the SHA-256 shows beside the button and on `antivirus.html#check`).
-5. Live mode lists payouts and wallets from the API and `config.js`. Still missing: the wallet page (wallet linking) the FAQ mentions, and `levels24h` in the API.
+5. Live mode lists payouts and wallets from the API and `config.js`. Still missing: the wallet page (wallet linking) the FAQ mentions.
 6. The "Your PC" tab says mining only uses spare GPU power and your PC works like normal. That's the user's experience mining PRL; change the copy if another coin or miner the app uses behaves differently.
 
 ## Copy rules

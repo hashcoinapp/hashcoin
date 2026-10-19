@@ -28,6 +28,20 @@ export interface MarketStatus {
   floatUsd: number;
 }
 
+/**
+ * Per holder level (1-3): wallets paid a bonus or holder reward today (UTC, like `last24h`) and the
+ * USD they received (as planned when paid). Null when the ledger has no tally yet (older ledgers).
+ */
+export function levels24h(l: Ledger, now: number): Record<"1" | "2" | "3", { wallets: number; paidUsd: number }> | null {
+  if (!l.levelPaid) return null;
+  const today = l.levelPaid.day === dayKey(now) ? l.levelPaid.levels : {};
+  const level = (n: number) => {
+    const paid = Object.values(today[n] ?? {});
+    return { wallets: paid.length, paidUsd: paid.reduce((a, u) => a + u, 0) };
+  };
+  return { "1": level(1), "2": level(2), "3": level(3) };
+}
+
 export function publicRecord(l: Ledger, x: {
   now: number; price: PriceContext; levelPrice?: PriceContext; rules: Rules; excluded: ReadonlySet<string>; explorer: (sig: string) => string;
   rate: { bps: number; scheduled?: { bps: number; epoch: number } }; rounds: RoundSummary[]; market?: MarketStatus;
@@ -83,6 +97,7 @@ export function publicRecord(l: Ledger, x: {
       taxTokens: tokens(l.totals.taxTokens), rounds: l.round, indexedTransactions: l.indexedTx,
     },
     last24h: last(1), last7d: last(7),
+    levels24h: levels24h(l, x.now),
     carry: { minerBonusUsd: l.chestCarryUsd, holderPotUsd: l.holderCarryUsd, heldBackMiningUsd: l.pending.reduce((a, p) => a + p.estimatedUsd, 0) },
     rounds: x.rounds.slice(-50).reverse().map((r) => ({ ...r, transactions: r.transactions.map(x.explorer) })),
     wallets,

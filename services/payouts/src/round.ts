@@ -12,7 +12,7 @@ import {
   bonusMiningUsd, runEpoch, runHolderPayout, settle, splitTax,
   type EpochResult, type HolderPayoutResult, type PriceContext, type Rules, type TaxSplit,
 } from "@hashcoin/engine";
-import { addBig, day, type Ledger, type Owed, walletState } from "./ledger.js";
+import { addBig, day, dayKey, type Ledger, type Owed, walletState } from "./ledger.js";
 
 export interface SettlementRule {
   /** "sales": pay held-back mining from recorded coin sales; "estimate": at its estimate (devnet). */
@@ -99,7 +99,7 @@ export function planRound(x: RoundInput): RoundPlan {
   const payouts: PlannedPayout[] = l.owed.map((o) => ({ ...o, why: `retry: ${o.why.replace(/^retry: /, "")}` }));
   for (const m of epoch.lines) {
     payouts.push({
-      address: m.address, usd: m.payNowUsd, buyUsd: m.immediateUsd, kind: "miner",
+      address: m.address, usd: m.payNowUsd, buyUsd: m.immediateUsd, kind: "miner", level: m.holderLevel,
       why: m.level
         ? `level ${m.level}: mined ${usd(m.immediateUsd)} now of ${usd(m.miningUsd)} + bonus ${usd(m.chestUsd)}`
         : `no qualified bag: mined ${usd(m.immediateUsd)} now of ${usd(m.miningUsd)}, no bonus`,
@@ -107,7 +107,7 @@ export function planRound(x: RoundInput): RoundPlan {
   }
   for (const h of holders?.lines ?? []) {
     if (h.usd < x.minHolderPayoutUsd) { holderCarryUsd += h.usd; continue; }
-    payouts.push({ address: h.address, usd: h.usd, kind: "holder", why: `H${h.holderLevel}: ${usd(h.balanceUsd)} bag, ${(100 * h.share).toFixed(2)}% of the pot` });
+    payouts.push({ address: h.address, usd: h.usd, kind: "holder", level: h.holderLevel, why: `H${h.holderLevel}: ${usd(h.balanceUsd)} bag, ${(100 * h.share).toFixed(2)}% of the pot` });
   }
   if (split.devUsd > 0) payouts.push({ address: x.dev, usd: split.devUsd, kind: "dev", why: `dev ${(100 * split.shares.dev).toFixed(2)}% of the tax` });
 
@@ -203,9 +203,26 @@ export function recordSent(l: Ledger, entry: Owed, amount: bigint, x: { now: num
   l.owed.splice(i, 1);
   day(l, x.now).paidTokens += Number(amount) / 10 ** x.decimals;
   if (entry.kind === "dev") { l.totals.devTokens = addBig(l.totals.devTokens, amount); return; }
+  tallyLevel(l, entry, amount, x.now);
   const w = (l.paid[entry.address] ??= { miner: "0", holder: "0" });
   if (entry.kind === "holder") { w.holder = addBig(w.holder, amount); l.totals.holderTokens = addBig(l.totals.holderTokens, amount); }
   else { w.miner = addBig(w.miner, amount); l.totals.minerTokens = addBig(l.totals.minerTokens, amount); }
+}
+
+/**
+ * Today's bonus and holder rewards per holder level and wallet (the public per-level table): the
+ * tax-funded part of a miner or holder payout to a level 1+ wallet, in USD as planned. Bought mining
+ * (and held-back mining, settled later) isn't counted: it follows the GPU, not the level. Recorded in
+ * `recordSent`, so it is saved with the payout being cleared and a crash can't count it twice.
+ */
+function tallyLevel(l: Ledger, entry: Owed, amount: bigint, now: number) {
+  if (amount <= 0n || (entry.kind !== "miner" && entry.kind !== "holder") || !entry.level) return;
+  const usd = entry.usd - (entry.buyUsd ?? 0);
+  if (!(usd > 0)) return;
+  const today = dayKey(now);
+  if (l.levelPaid?.day !== today) l.levelPaid = { day: today, levels: {} };
+  const byWallet = (l.levelPaid.levels[entry.level] ??= {});
+  byWallet[entry.address] = (byWallet[entry.address] ?? 0) + usd;
 }
 
 /** Stage a round and record what was sent in one go (tests, and the shape of a whole round). */
