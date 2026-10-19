@@ -6,13 +6,11 @@ export interface WeightInput {
   earningsUsd: number;
   /** Miner level 0-3 (0 = no bag, no bonus). */
   level: Level;
-  /** Share of recent payouts kept, 0 to 1 (`keptShare`); default 1. */
-  kept?: number;
 }
 
 export function weightOf(x: WeightInput, rules: Rules): number {
   if (x.earningsUsd <= 0 || x.level === 0) return 0;
-  return Math.pow(x.earningsUsd, rules.alpha) * rules.miner.mult[x.level] * Math.min(1, Math.max(0, x.kept ?? 1));
+  return Math.pow(x.earningsUsd, rules.alpha) * rules.miner.mult[x.level];
 }
 
 /** Each address's share of the pot: its weight over the total. No per-wallet cap (user, Oct 4). */
@@ -24,7 +22,7 @@ export function proportionalShares(weights: Map<string, number>): Map<string, nu
   return shares;
 }
 
-/** Miner chest shares: √(earnings) × miner level × kept. Miners with no bag (level 0) get none. */
+/** Miner chest shares: √(earnings) × miner level. Miners with no qualified bag (level 0) get none. */
 export function chestShares(inputs: WeightInput[], rules: Rules): Map<string, number> {
   const weights = new Map<string, number>();
   for (const x of inputs) {
@@ -36,13 +34,13 @@ export function chestShares(inputs: WeightInput[], rules: Rules): Map<string, nu
 
 export interface HolderWeightInput {
   address: string;
-  /** Bag value in USD. */
+  /** Qualified bag in USD (bag minus the selling penalty). */
   balanceUsd: number;
   level: HolderLevel;
 }
 
 /**
- * Holder pot shares: bag × holder level. Linear in the bag (not √),
+ * Holder pot shares: qualified bag × level. Linear in the bag (not √),
  * so splitting one bag across many wallets gains nothing. Wallets below H1 get nothing.
  */
 export function holderShares(inputs: HolderWeightInput[], rules: Rules): Map<string, number> {

@@ -125,7 +125,7 @@ async function main() {
   const price = { priceUsd: PRICE_USD, decimals: DECIMALS };
   const now = Date.now();
   const walletState = async (owner: PublicKey): Promise<WalletState> =>
-    ({ address: owner.toBase58(), balance: await tokenBalance(conn, owner, mint), clockMs: 0, clockAt: now });
+    ({ address: owner.toBase58(), balance: await tokenBalance(conn, owner, mint), penalty: 0n });
   const minerWallets = new Map<string, WalletState>();
   for (const m of miners) minerWallets.set(m.wallet, await walletState(new PublicKey(m.wallet)));
   const epoch = runEpoch({

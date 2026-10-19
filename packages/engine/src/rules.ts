@@ -25,18 +25,13 @@ export interface Rules {
   /** Miners' total pay target as a multiple of what their GPUs mined (5 = mining + 4× from the chest). */
   minerTargetMult: number;
   holder: {
-    /** Bag (USD) needed for H1 / H2 / H3. */
+    /** Qualified bag (USD) needed for Level 1 / 2 / 3. No hold clock (user, Oct 18). */
     usd: [number, number, number];
-    /** Hold clock needed for H1 / H2 / H3 (ms of clock time, which can run faster than real time). */
-    clockMs: [number, number, number];
     /**
-     * Clock speed = bag USD ÷ `speedPerUsd`, between 1× and `maxSpeed`×. A bigger bag ages faster;
-     * buying more speeds the clock up from then on, never with an instant jump.
+     * Selling counts this many times against the qualified bag (3: sell $100 of a $500 bag and the
+     * bag is $400 but qualifies as $200). Buying adds back 1:1; selling everything wipes it.
      */
-    speedPerUsd: number;
-    maxSpeed: number;
-    /** Selling a fraction s of the bag takes `sellPenalty` × s of the clock (2.5: sell 20%, lose 50%; 40%+ resets). */
-    sellPenalty: number;
+    sellMultiplier: number;
     /** Holder-pot weight multiplier per holder level. */
     mult: Record<1 | 2 | 3, number>;
   };
@@ -53,11 +48,6 @@ export interface Rules {
      * an hour counts as half an hour).
      */
     fullCreditAt: number;
-    /**
-     * Keep what you earn (user, Oct 18): the bonus is scaled by the share of the last `keptDays` days'
-     * payouts the wallet hasn't sold (`keptShare`), so dumping earnings shrinks the bonus.
-     */
-    keptDays: number;
     /** Chest weight multiplier per miner level (0 = no bag: no bonus). */
     mult: Record<Level, number>;
   };
@@ -83,16 +73,12 @@ export const DEFAULT_RULES: Rules = {
   minerTargetMult: 5,
   holder: {
     usd: [50, 500, 2500],
-    clockMs: [0, 24 * HOUR_MS, 7 * 24 * HOUR_MS],
-    speedPerUsd: 2500,
-    maxSpeed: 3,
-    sellPenalty: 2.5,
+    sellMultiplier: 3,
     mult: { 1: 1, 2: 2, 3: 4 },
   },
   miner: {
     windowDays: 14,
     fullCreditAt: 0.8,
-    keptDays: 14,
     mult: { 0: 0, 1: 1, 2: 2, 3: 4 },
   },
   alpha: 0.5,

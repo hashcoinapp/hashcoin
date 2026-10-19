@@ -163,7 +163,7 @@
     cards.forEach((c) => (c.tabIndex = +c.dataset.lv === L ? 0 : -1));
 
     // If you mine: the bonus comes with the bag (one ladder); without one, mining is still paid.
-    $("#mine-needs").textContent = ["Bonus needs $50 held", "Bonus needs $500 held 1 day", "Bonus needs $2,500 held 7 days"][L - 1];
+    $("#mine-needs").textContent = ["Bonus needs $50 held", "Bonus needs $500 held", "Bonus needs $2,500 held"][L - 1];
     const r = M.miner({ myRev: g.rev, level: L });
     const top = M.miner({ myRev: g.rev, level: 3 }).total || 1;
     tween($("#earn-day"), r.total, money);

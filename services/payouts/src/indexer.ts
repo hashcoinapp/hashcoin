@@ -1,13 +1,14 @@
-// Transfer indexer: replays every mint transaction into wallet balances and hold clocks.
-// Any outflow counts as selling (docs/PROJECT.md: transfers between your own wallets need linking).
+// Transfer indexer: replays every mint transaction into wallet bags and selling penalties.
+// Any outflow counts as selling, 3× against the qualified bag (docs/PROJECT.md §3; transfers between
+// your own wallets need linking).
 import { applyBalanceChange, type PriceContext, type Rules } from "@hashcoin/engine";
 import type { MintTx } from "@hashcoin/chain";
-import { addBig, day, type Ledger, recordFlow, storeWallet, walletState } from "./ledger.js";
+import { addBig, day, type Ledger, storeWallet, walletState } from "./ledger.js";
 
 export interface IndexContext {
   price: PriceContext;
   rules: Rules;
-  /** Treasury and dev: their transfers are payouts and funding, not trading, and they have no hold clock. */
+  /** Treasury and dev: their transfers are payouts and funding, not trading, and they have no levels. */
   platform: ReadonlySet<string>;
   /**
    * Owners of the pool vaults (the DBC and DAMM v2 pool authorities). A transaction that only moves
@@ -28,8 +29,6 @@ export function indexTransactions(l: Ledger, txs: MintTx[], ctx: IndexContext): 
   for (const tx of txs) {
     const live = tx.at >= l.startedAt;
     let txVolume = 0n, net = 0n, ours = false, onlyPools = tx.deltas.length > 0;
-    // Keep what you earn: a wallet's inflow in a transaction we take part in is a payout from us.
-    const fromUs = tx.deltas.some((d) => ctx.platform.has(d.owner));
     for (const d of tx.deltas) {
       net += d.delta;
       if (ctx.platform.has(d.owner)) ours = true;
@@ -38,12 +37,8 @@ export function indexTransactions(l: Ledger, txs: MintTx[], ctx: IndexContext): 
       if (!d.owner || ctx.platform.has(d.owner)) continue;
       if (d.delta < 0n) txVolume -= d.delta;
       const before = l.wallets[d.owner];
-      const after = applyBalanceChange(walletState(d.owner, before), d.delta, tx.at, ctx.price, ctx.rules);
+      const after = applyBalanceChange(walletState(d.owner, before), d.delta, ctx.rules);
       l.wallets[d.owner] = storeWallet(after, before?.firstAt ?? tx.at);
-      if (!ctx.pools?.has(d.owner)) {
-        const tokens = Number(d.delta < 0n ? -d.delta : d.delta) / 10 ** ctx.price.decimals;
-        recordFlow(l, d.owner, tx.at, d.delta < 0n ? "out" : fromUs ? "paid" : "in", tokens);
-      }
     }
     // Fees are withheld out of the moved amount, so balances shrink by the fee: net < 0.
     if (live && ours && net < 0n) l.ownFeesUnharvested = addBig(l.ownFeesUnharvested, -net);

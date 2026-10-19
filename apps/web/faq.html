@@ -195,8 +195,8 @@
               <thead><tr><th>Level</th><th>Requirement</th><th>Weight</th></tr></thead>
               <tbody>
                 <tr><td>Level 1</td><td>Hold at least $50 of $HASH</td><td class="mono">1×</td></tr>
-                <tr><td>Level 2</td><td>Hold at least $500, with 24 hours on your hold clock</td><td class="mono">2×</td></tr>
-                <tr><td>Level 3</td><td>Hold at least $2,500, with 7 days on your hold clock</td><td class="mono">4×</td></tr>
+                <tr><td>Level 2</td><td>Hold at least $500 of $HASH</td><td class="mono">2×</td></tr>
+                <tr><td>Level 3</td><td>Hold at least $2,500 of $HASH</td><td class="mono">4×</td></tr>
               </tbody>
             </table>
             <p>Holder rewards share = <b>bag × weight</b>. Miner bonus share = <b>√(your GPU's USD earnings) × weight</b>; the square root means a small card gets a bigger boost relative to what it mines.</p>
@@ -212,11 +212,11 @@
             </details>
             <details>
               <summary>What if I sell what I earn?</summary>
-              <div class="a"><p>Then your bonus shrinks to match. It's scaled by how much of the $HASH paid to you in the last 14 days you've kept: <b>1 − (sold − bought) ÷ paid</b>. Kept it all, full bonus. Sold half, half the bonus. Sold it all, no bonus. Buying $HASH counts against selling. Your mining itself is always paid in full, and the bonus you give up goes to holders. It's all worked out from public on-chain transfers.</p></div>
+              <div class="a"><p>The same rule applies: selling counts 3× against your bag. Sell your pay and your bag drops below your level's line, and with the level goes the miner bonus. Your mining itself is always paid in full. It's all worked out from public on-chain transfers.</p></div>
             </details>
             <details>
-              <summary>What is the hold clock?</summary>
-              <div class="a"><p>It starts once your bag first reaches $50 and keeps running, even through price dips. <b>Bigger bags age faster:</b> the clock runs at 1× up to $2,500, 2× at $5,000 and 3× at $7,500 or more, so buying more speeds it up from then on. <b>Selling resets the clock.</b> Any transfer out counts as selling, including sending to a liquidity pool or an exchange. Moving $HASH between your own wallets doesn't, once you link them on the wallet page (at launch): you sign a free message with each, and they share one bag and one clock.</p></div>
+              <summary>How does selling affect my level?</summary>
+              <div class="a"><p>There isn't one. Your level depends only on how much $HASH you hold, counted with one rule: <b>selling counts 3×</b>. Sell $100 of a $500 bag and your bag is $400, but it counts as $200, so you drop from Level 2 to Level 1 until you buy back. Buying counts at once. Sell everything and you start fresh. Any transfer out counts as selling, including sending to a liquidity pool, an exchange or another wallet. Moving $HASH between your own wallets doesn't, once you link them on the wallet page (at launch): you sign a free message with each, and they share one bag.</p></div>
             </details>
             <details>
               <summary>Does mined $HASH count toward the thresholds?</summary>
@@ -224,7 +224,7 @@
             </details>
             <details>
               <summary>What happens if the price dips?</summary>
-              <div class="a"><p>Levels use the higher of the 1-hour and 7-day average prices, so a sudden dip doesn't count right away. If the price stays down long enough for your bag to fall under a threshold, you drop to the level below. When it's back above, the level returns immediately, because your hold clock kept running.</p></div>
+              <div class="a"><p>Levels use the higher of the 1-hour and 7-day average prices, so a sudden dip doesn't count right away. If the price stays down long enough for your bag to fall under a line, you drop to the level below. When it's back above, the level returns at the next payout.</p></div>
             </details>
             <details>
               <summary>How often are holders paid?</summary>
@@ -232,7 +232,7 @@
             </details>
             <details>
               <summary>Can I split my bag across wallets to earn more?</summary>
-              <div class="a"><p>No. Holder rewards follow bag size directly, so ten small wallets earn the same as one big one, and moving tokens between wallets counts as selling, which shrinks the clock.</p></div>
+              <div class="a"><p>No. Holder rewards follow bag size directly, so ten small wallets earn the same as one big one, and moving tokens between wallets counts as selling (3× against your bag) unless you link them.</p></div>
             </details>
           </div>
         </section>
@@ -305,7 +305,7 @@
               <li><b>$HASH is volatile.</b> Like any new token, it can lose most or all of its value.</li>
               <li><b>Payouts vary.</b> They depend on coin prices, pool results, how much $HASH is traded and how many people mine. They can fall to near zero.</li>
               <li><b>Costs are yours.</b> Electricity, heat and hardware wear. The 2–5% tax applies when you buy, sell or move $HASH.</li>
-              <li><b>Selling resets your hold clock.</b> Taking profit can drop your level, which lowers both your holder rewards and your miner bonus.</li>
+              <li><b>Selling counts 3× against your level.</b> Taking profit can drop your level, which lowers both your holder rewards and your miner bonus, until you buy back.</li>
               <li><b>New software.</b> Bugs are possible. The code is open so anyone can check it.</li>
               <li><b>Rules where you live.</b> Mining and tokens are regulated differently by country. Check yours.</li>
             </ul>

@@ -1,4 +1,4 @@
-import { computeHolderLevel, positionUsd, type PriceContext, type WalletState } from "./levels.js";
+import { computeHolderLevel, qualifiedUsd, type PriceContext, type WalletState } from "./levels.js";
 import type { HolderLevel, Rules } from "./rules.js";
 import { holderShares } from "./weights.js";
 
@@ -17,6 +17,7 @@ export interface HolderPayoutInput {
 export interface HolderPayoutLine {
   address: string;
   holderLevel: HolderLevel;
+  /** Qualified bag (USD): the bag minus the selling penalty. */
   balanceUsd: number;
   share: number;
   usd: number;
@@ -29,15 +30,15 @@ export interface HolderPayoutResult {
   paidUsd: number;
 }
 
-/** Split the holder pot by bag × holder level (H1-H3), each wallet capped. */
+/** Split the holder pot by qualified bag × level (1-3). */
 export function runHolderPayout(input: HolderPayoutInput): HolderPayoutResult {
-  const { rules, price, now } = input;
+  const { rules, price } = input;
   const entries = [];
   for (const w of input.wallets) {
     if (input.excluded?.has(w.address)) continue;
-    const level = computeHolderLevel(w, price, now, rules);
+    const level = computeHolderLevel(w, price, rules);
     if (level === 0) continue;
-    entries.push({ address: w.address, level, balanceUsd: positionUsd(w.balance, price) });
+    entries.push({ address: w.address, level, balanceUsd: qualifiedUsd(w, price) });
   }
   const shares = holderShares(entries, rules);
   const lines = entries

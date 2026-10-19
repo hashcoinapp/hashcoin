@@ -71,7 +71,7 @@
     const mk = r.mk;
     const hold = M.holder(S.bag, hl, mkInputs());
     $("#fc-hlevel-hint").textContent = hl > 0
-      ? `Level ${hl}: ${(100 * mk.yieldPerDay[hl - 1]).toFixed(2)}% of your bag a day at this volume, and a ${M.MULT[hl - 1]}× miner bonus.${M.HOLDER.hours[hl - 1] ? ` Needs ${M.HOLDER.hours[hl - 1] >= 48 ? `${M.HOLDER.hours[hl - 1] / 24} days` : `${M.HOLDER.hours[hl - 1]} hours`} on your hold clock (a bigger bag gets there faster).` : ""}`
+      ? `Level ${hl}: ${(100 * mk.yieldPerDay[hl - 1]).toFixed(2)}% of your bag a day at this volume, and a ${M.MULT[hl - 1]}× miner bonus.`
       : "Below $50 a bag earns no holder rewards, and mining gets no bonus.";
     $("#fc-ratio-hint").textContent =
       `Miners reach 5× above ${whole(mk.targetVolPerGpu)} per GPU. ` +

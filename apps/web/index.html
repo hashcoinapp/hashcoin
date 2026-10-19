@@ -90,7 +90,7 @@
         <p class="hero-lede">GPUs mine whatever pays most, then buy <b>$HASH</b> on Solana, around the clock. Every trade pays a 2–5% tax that goes back to miners and holders.</p>
         <ul class="hero-points">
           <li><b>Hold it.</b> Holders get at least 1% of every trade. No GPU needed.</li>
-          <li><b>Mine it.</b> Paid in $HASH. Hold $50+ and keep what you earn, and you get a bonus on top.</li>
+          <li><b>Mine it.</b> Paid in $HASH. Hold $50+ and you also get a bonus on top.</li>
           <li><b>Or both.</b> Your bag sets your level, and a higher level means a bigger bonus.</li>
         </ul>
         <div class="hero-ctas">
@@ -108,7 +108,7 @@
         <div class="fly-stage">
         <!-- Flywheel 1: how miners and the tax drive the coin -->
         <div class="cycle" id="fw-coin" role="tabpanel" aria-labelledby="fw-coin-tab">
-          <p class="sr-only">The coin flywheel: 1, miners' earnings are market buys of $HASH. 2, holders hold, because holding longer unlocks bigger rewards. 3, a 2–5% tax on every trade fills the reward pot. 4, miners and holders get paid from it: miners are topped up to 5 times what their GPU mines, holders share the rest. 5, bigger rewards bring more miners and holders, and more buying. Then it repeats.</p>
+          <p class="sr-only">The coin flywheel: 1, miners' earnings are market buys of $HASH. 2, holders hold, because selling counts three times against your level. 3, a 2–5% tax on every trade fills the reward pot. 4, miners and holders get paid from it: miners are topped up to 5 times what their GPU mines, holders share the rest. 5, bigger rewards bring more miners and holders, and more buying. Then it repeats.</p>
           <svg class="cycle-svg" aria-hidden="true" focusable="false"></svg>
 
           <article class="st" data-st="0" aria-hidden="true">
@@ -127,12 +127,12 @@
           <article class="st" data-st="1" aria-hidden="true">
             <div class="art art-hold">
               <div class="wallet">
-                <span class="w-label">Hold clock <span class="w-levels"><span class="l1">L1</span><span class="l2">L2</span><span class="l3">L3</span></span></span>
+                <span class="w-label">Your bag <span class="w-levels"><span class="l1">L1</span><span class="l2">L2</span><span class="l3">L3</span></span></span>
                 <div class="w-clock"><i></i></div>
-                <small>Longer hold, bigger rewards</small>
+                <small>Bigger bag, bigger rewards</small>
               </div>
             </div>
-            <div class="st-text"><span class="st-n">2</span><h3>Holders hold</h3><p>Holding longer unlocks bigger rewards.</p></div>
+            <div class="st-text"><span class="st-n">2</span><h3>Holders hold</h3><p>Selling counts 3× against your level.</p></div>
           </article>
 
           <article class="st" data-st="2" aria-hidden="true">
@@ -182,7 +182,7 @@
 
         <!-- Flywheel 2: your bag compounding across levels (example in dollars) -->
         <div class="cycle bag" id="fw-bag" role="tabpanel" aria-labelledby="fw-bag-tab" data-level="1" hidden>
-          <p class="sr-only">Your bag flywheel, an example with a sample bag at each level at launch-week trading: 1, get $HASH by buying it, mining it with a GPU, or both. 2, every trade pays your bag holder rewards, and miners also get a bonus. 3, rewards are paid in $HASH, so your bag grows and the new $HASH earns too. 4, a bigger bag held longer reaches the next level. 5, the next level counts your bag 2 or 4 times. Then around again. An estimate, not a promise.</p>
+          <p class="sr-only">Your bag flywheel, an example with a sample bag at each level at launch-week trading: 1, get $HASH by buying it, mining it with a GPU, or both. 2, every trade pays your bag holder rewards, and miners also get a bonus. 3, rewards are paid in $HASH, so your bag grows and the new $HASH earns too. 4, a bigger bag reaches the next level. 5, the next level counts your bag 2 or 4 times. Then around again. An estimate, not a promise.</p>
           <svg class="cycle-svg" aria-hidden="true" focusable="false"></svg>
 
           <article class="st" data-st="0" aria-hidden="true">
@@ -217,9 +217,9 @@
             <div class="art art-level">
               <div class="lv-steps"><span class="l1">Level 1</span><span class="l2">Level 2</span><span class="l3">Level 3</span></div>
               <div class="lv-track"><i></i></div>
-              <span class="lv-note" data-b="lvnote">Level 2: $500+ held 1 day</span>
+              <span class="lv-note" data-b="lvnote">Level 2: $500+ bag</span>
             </div>
-            <div class="st-text"><span class="st-n">4</span><h3>Level up</h3><p>A bigger bag, held longer.</p></div>
+            <div class="st-text"><span class="st-n">4</span><h3>Level up</h3><p>A bigger bag, a higher level.</p></div>
           </article>
 
           <article class="st" data-st="4" aria-hidden="true">
@@ -288,12 +288,12 @@
             </button>
             <button type="button" class="lv-card" role="radio" data-lv="2" aria-checked="false">
               <span class="lv-top"><span class="lv-name">Level 2</span><b class="lv-x">2×</b></span>
-              <span class="lv-req"><i>Hold</i>$500+, held 1 day</span>
+              <span class="lv-req"><i>Hold</i>$500+</span>
               <span class="lv-req"><i>Pays</i>2× rewards and bonus</span>
             </button>
             <button type="button" class="lv-card" role="radio" data-lv="3" aria-checked="false">
               <span class="lv-top"><span class="lv-name">Level 3</span><b class="lv-x">4×</b></span>
-              <span class="lv-req"><i>Hold</i>$2,500+, held 7 days</span>
+              <span class="lv-req"><i>Hold</i>$2,500+</span>
               <span class="lv-req"><i>Pays</i>4× rewards and bonus</span>
             </button>
           </div>
@@ -323,7 +323,7 @@
             <div class="ecard both">
               <h3>Hold + mine</h3>
               <div class="earn-big"><b id="both-day">—</b><span>/day</span></div>
-              <p class="both-note">Mined $HASH lands in your bag, so it counts toward your level and earns holder rewards too. Sell what you earn and your bonus shrinks to match.</p>
+              <p class="both-note">Mined $HASH lands in your bag, so it counts toward your level and earns holder rewards too. Sell it and your bag counts 3× less, so your bonus drops too.</p>
             </div>
           </div>
           <p class="xfoot">Estimate at launch-week trading, not a promise. <a href="#math">The math</a> · <a href="calculator.html">Full calculator</a></p>
@@ -427,7 +427,7 @@
       <div class="xpanel" id="levels" role="tabpanel" aria-labelledby="t-levels" tabindex="0" hidden>
         <div class="xhead">
           <h2>Higher level, bigger share.</h2>
-          <p class="lede">Bigger bag, higher level, for holder rewards and the miner bonus alike. Hold it longer to unlock the next one. Level 3 counts four times.</p>
+          <p class="lede">Bigger bag, higher level, for holder rewards and the miner bonus alike. Level 3 counts four times. Selling counts 3× against it.</p>
         </div>
         <div class="lv-grid">
           <div class="panel">
@@ -435,8 +435,8 @@
             <table class="lv-table">
               <tbody>
                 <tr class="lvrow l1"><td><span class="lvb">L1</span></td><td>Hold <b>$50</b>+</td><td class="usd" data-lvh="1">—</td></tr>
-                <tr class="lvrow l2"><td><span class="lvb">L2</span></td><td>Hold <b>$500</b>+ for <b>1 day</b></td><td class="usd" data-lvh="2">—</td></tr>
-                <tr class="lvrow l3"><td><span class="lvb">L3</span></td><td>Hold <b>$2,500</b>+ for <b>7 days</b></td><td class="usd" data-lvh="3">—</td></tr>
+                <tr class="lvrow l2"><td><span class="lvb">L2</span></td><td>Hold <b>$500</b>+</td><td class="usd" data-lvh="2">—</td></tr>
+                <tr class="lvrow l3"><td><span class="lvb">L3</span></td><td>Hold <b>$2,500</b>+</td><td class="usd" data-lvh="3">—</td></tr>
               </tbody>
             </table>
           </div>
@@ -453,9 +453,8 @@
           </div>
         </div>
         <ul class="rules">
-          <li><b>Bigger bags age faster.</b> Your hold clock runs up to 3× as fast at $7,500+.</li>
-          <li><b>Selling resets the clock.</b> Hold to keep your level.</li>
-          <li><b>Keep what you earn.</b> Your miner bonus is scaled by how much of your last 14 days' pay you haven't sold.</li>
+          <li><b>Selling counts 3×.</b> Sell $100 of a $500 bag and it counts as $200 until you buy back.</li>
+          <li><b>Buying counts at once.</b> No waiting: your level updates at the next payout.</li>
           <li><b>Dips don't reset you.</b> Back above the line, your level comes straight back.</li>        </ul>
       </div>
 
@@ -589,11 +588,11 @@
           <div class="xhead"><h2>FAQ</h2><p class="muted">More in the <a href="faq.html" class="gold">full FAQ</a>.</p></div>
           <div class="faq">
             <details><summary>Do I need a GPU?</summary><div class="a"><p>No. Hold $50+ and you share the holder rewards from every trade. Miners' share is capped, so busier trading means more for holders.</p></div></details>
-            <details><summary>Do I need to buy $HASH to mine?</summary><div class="a"><p>No. Mining pays you in $HASH. The miner bonus starts once your bag reaches $50, and the $HASH you mine counts toward it. The bonus is scaled by how much of your recent pay you've kept, so selling it shrinks the bonus.</p></div></details>
+            <details><summary>Do I need to buy $HASH to mine?</summary><div class="a"><p>No. Mining pays you in $HASH. The miner bonus starts once your bag reaches $50, and the $HASH you mine counts toward it. Selling counts 3× against your bag, so selling your pay costs you the bonus.</p></div></details>
             <details><summary>Why buy if I can just mine it?</summary><div class="a"><p>Mining without a bag gets no miner bonus. The bonus starts at $50 held and doubles at Level 2 and quadruples at Level 3, and the bag itself earns holder rewards. Mining fills your bag slowly; buying gets you there sooner.</p></div></details>
             <details><summary>Does the $HASH I mine earn holder rewards?</summary><div class="a"><p>Yes. Mined $HASH lands in your wallet and counts as your bag, so you get the miner bonus and holder rewards at the same time.</p></div></details>
             <details><summary>How is the tax split between miners and holders?</summary><div class="a"><p>It adjusts itself every payout. Miners get what lifts their average pay to 5× what their GPUs mine (45–75% of the tax). Holders get the rest, never less than 1% of every trade.</p></div></details>
-            <details><summary>What happens if I sell?</summary><div class="a"><p>You pay the tax (2–5%), and your hold clock resets.</p></div></details>
+            <details><summary>What happens if I sell?</summary><div class="a"><p>You pay the tax (2–5%), and the sale counts 3× against your bag for your level and rewards: sell $100 of a $500 bag and it counts as $200 until you buy back.</p></div></details>
             <details><summary>How much will I make?</summary><div class="a"><p>It depends on trading volume and how many GPUs mine. The estimate uses launch-week trading. After launch, the site shows what each level was actually paid.</p></div></details>
             <details><summary>Will mining slow down my PC?</summary><div class="a"><p>No. The miner only uses GPU power you aren't using. When a game or render needs the GPU, mining steps back and only your hashrate drops.</p></div></details>
             <details><summary>Does it work on laptops and workstations?</summary><div class="a"><p>Yes. Any PC with an NVIDIA, AMD or Intel graphics card: gaming PCs, gaming laptops, AI rigs, editing and render machines.</p></div></details>

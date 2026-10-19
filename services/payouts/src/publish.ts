@@ -1,8 +1,8 @@
 // The public record: totals, the tax rate, recent rounds with their transactions, and each
 // wallet's levels and what it has been paid. Served by services/api (/v1/stats, /v1/wallet/:address).
-import { computeHolderLevel, computeMinerLevel, holdClockMs, keptShare, positionUsd, type PriceContext, type Rules } from "@hashcoin/engine";
+import { computeHolderLevel, computeMinerLevel, holderProgress, positionUsd, type PriceContext, type Rules } from "@hashcoin/engine";
 import { DAY_MS } from "@hashcoin/engine";
-import { dayKey, type Ledger, walletFlows, walletState } from "./ledger.js";
+import { dayKey, type Ledger, walletState } from "./ledger.js";
 
 export interface RoundSummary {
   round: number;
@@ -51,15 +51,16 @@ export function publicRecord(l: Ledger, x: {
   const wallets = Object.fromEntries([...known].filter((a) => !x.excluded.has(a)).map((a) => {
     const s = l.wallets[a];
     const w = walletState(a, s);
-    const holderLevel = computeHolderLevel(w, levelPrice, x.now, x.rules);
+    const holderLevel = computeHolderLevel(w, levelPrice, x.rules);
+    const progress = holderProgress(w, levelPrice, x.rules);
     const hours = l.hoursInWindow[a] ?? 0;
     const paid = l.paid[a] ?? { miner: "0", holder: "0" };
     return [a, {
       balanceTokens: tokens(s?.balance ?? "0"), balanceUsd: positionUsd(w.balance, x.price),
       holderLevel, minerLevel: hours > 0 ? computeMinerLevel(holderLevel) : null,
-      holdClockHours: holdClockMs(w, x.now, levelPrice, x.rules) / 3_600_000, hoursMinedInWindow: hours,
-      // Keep what you earn: share of the last 14 days' payouts not sold (scales the miner bonus).
-      keptShare: keptShare(walletFlows(l, a, x.now, x.rules.miner.keptDays)),
+      hoursMinedInWindow: hours,
+      // The qualified bag (bag minus 2× what was sold) sets the level and the holder-reward share.
+      qualifiedUsd: progress.qualifiedUsd, usdToNextLevel: progress.usdToNextHolder,
       paidTokens: { miner: tokens(paid.miner), holder: tokens(paid.holder) },
       // Held-back mining (paid once the mined coin sells) plus payouts that failed and will be retried.
       pendingUsd: l.pending.filter((p) => p.address === a).reduce((s, p) => s + p.estimatedUsd, 0) + l.owed.filter((o) => o.address === a).reduce((s, o) => s + o.usd, 0),

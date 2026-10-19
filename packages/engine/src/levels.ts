@@ -5,19 +5,20 @@ export function levelPriceUsd(avg1hUsd: number, avg7dUsd: number): number {
   return Math.max(avg1hUsd, avg7dUsd);
 }
 
-/** What the platform tracks per wallet. Token amounts are in base units. */
+/**
+ * What the platform tracks per wallet. Token amounts are in base units.
+ *
+ * Levels (user, Oct 18: "no hold clock, level qualification is measured in unsold bag. selling is
+ * multiplied by 3x"): selling X takes X off the bag and adds 2X to `penalty`, so the qualified bag
+ * (bag − penalty) drops by 3X. Buying adds to the bag, so it earns the qualified bag back. The
+ * penalty never fades; selling everything wipes it (a returning buyer starts fresh).
+ */
 export interface WalletState {
   address: string;
   /** Current $HASH balance (base units), read from chain. */
   balance: bigint;
-  /**
-   * Hold clock (ms of clock time) as of `clockAt`. It ticks at the bag's clock speed (1× to 3×),
-   * so it can run ahead of real time. Starts when the bag first reaches the H1 size; selling takes
-   * time off. Null until then and after selling everything.
-   */
-  clockMs: number | null;
-  /** When `clockMs` was last brought up to date (ms epoch). */
-  clockAt: number;
+  /** Tokens (base units) taken off the qualified bag by past sales: (sell multiplier − 1) × sold. */
+  penalty: bigint;
 }
 
 export interface PriceContext {
@@ -33,78 +34,43 @@ export function positionUsd(balance: bigint, p: PriceContext): number {
   return (Number(balance) / 10 ** p.decimals) * p.priceUsd;
 }
 
-/** How fast the hold clock runs for a bag: bag ÷ `speedPerUsd`, between 1× and `maxSpeed`×. */
-export function clockSpeed(balance: bigint, p: PriceContext, rules: Rules): number {
-  const h = rules.holder;
-  return Math.min(h.maxSpeed, Math.max(1, positionUsd(balance, p) / h.speedPerUsd));
+/** The qualified bag in tokens (base units): the bag minus the selling penalty, never below 0. */
+export function qualifiedTokens(w: WalletState): bigint {
+  return w.balance > w.penalty ? w.balance - w.penalty : 0n;
+}
+
+/** The qualified bag in USD at the level price: what sets the level and the holder-reward share. */
+export function qualifiedUsd(w: WalletState, p: PriceContext): number {
+  return positionUsd(qualifiedTokens(w), p);
 }
 
 /**
- * The hold clock at `now`, ticking at the current bag's speed since `clockAt`. Callers bring the
- * clock up to date at every balance change and payout check, so a price move only affects the
- * speed from the next check on.
+ * Holder level: the highest of Level 1-3 whose bag the qualified bag reaches ($50 / $500 / $2,500).
+ * A dip below a threshold drops the level; recovering restores it at once.
  */
-export function holdClockMs(w: WalletState, now: number, p: PriceContext, rules: Rules): number {
-  if (w.clockMs === null) return 0;
-  return w.clockMs + Math.max(0, now - w.clockAt) * clockSpeed(w.balance, p, rules);
-}
-
-/** Bring the stored clock up to `now` (call at each payout check so speed follows the price). */
-export function advanceClock(w: WalletState, now: number, p: PriceContext, rules: Rules): WalletState {
-  if (w.clockMs === null) return { ...w, clockAt: now };
-  return { ...w, clockMs: holdClockMs(w, now, p, rules), clockAt: now };
-}
-
-/**
- * Holder level: the highest of H1-H3 whose bag and hold clock are both met.
- * A dip below a bag threshold drops the level; recovering restores it at once,
- * because the clock keeps running through price moves.
- */
-export function computeHolderLevel(w: WalletState, p: PriceContext, now: number, rules: Rules): HolderLevel {
-  const usd = positionUsd(w.balance, p);
-  const clock = holdClockMs(w, now, p, rules);
+export function computeHolderLevel(w: WalletState, p: PriceContext, rules: Rules): HolderLevel {
+  const usd = qualifiedUsd(w, p);
   const [u1, u2, u3] = rules.holder.usd;
-  const [c1, c2, c3] = rules.holder.clockMs;
-  if (usd >= u3 && clock >= c3) return 3;
-  if (usd >= u2 && clock >= c2) return 2;
-  if (usd >= u1 && clock >= c1) return 1;
+  if (usd >= u3) return 3;
+  if (usd >= u2) return 2;
+  if (usd >= u1) return 1;
   return 0;
 }
 
 /**
- * Miner level: one ladder with the holder level (user, Oct 18). A miner at H1/H2/H3 earns the bonus
- * at 1×/2×/4×; a miner with no bag (H0) is paid for its mining in $HASH but gets no bonus.
+ * Miner level: one ladder with the holder level (user, Oct 18). A miner at Level 1/2/3 earns the
+ * bonus at 1×/2×/4×; a miner with no qualified bag (0) is paid for its mining in $HASH but gets no
+ * bonus. Selling pay costs 3× in qualified bag, so dumping it loses the level, and with it the bonus.
  */
 export function computeMinerLevel(holderLevel: HolderLevel): Level {
   return holderLevel;
 }
 
-/** A wallet's $HASH flows over the last `rules.miner.keptDays` days, in tokens. */
-export interface WalletFlows {
-  /** Paid to it by the platform (mining, bonus, holder rewards). */
-  paid: number;
-  /** Sent out: sells, transfers, deposits. */
-  out: number;
-  /** Bought or received from anyone but the platform. */
-  in: number;
-}
-
 /**
- * Keep what you earn (user, Oct 18): the share of recent payouts the wallet hasn't sold, 0 to 1.
- * kept = 1 − (sent out − bought in) ÷ paid. Buying cancels selling; a wallet with no recent payouts
- * counts as having kept everything. The miner bonus is scaled by it.
- */
-export function keptShare(f: WalletFlows | undefined): number {
-  if (!f || !(f.paid > 0)) return 1;
-  const sold = Math.max(0, f.out - f.in);
-  return Math.min(1, Math.max(0, 1 - sold / f.paid));
-}
-
-/**
- * How much of a mining hour counts (hours are shown to miners) for one GPU: all of it at `fullCreditAt` (80%) or
- * more of the GPU's expected rate, less in proportion below. Measure over a full hour so share
- * luck evens out. `expectedUsd` should be the catalog rate for the reported model; a rig's own
- * benchmark could be sandbagged, so use it only for cards the catalog doesn't know.
+ * How much of a mining hour counts (hours are shown to miners) for one GPU: all of it at
+ * `fullCreditAt` (80%) or more of the GPU's expected rate, less in proportion below. Measure over a
+ * full hour so share luck evens out. `expectedUsd` should be the catalog rate for the reported model;
+ * a rig's own benchmark could be sandbagged, so use it only for cards the catalog doesn't know.
  */
 export function hourCredit(actualUsd: number, expectedUsd: number, rules: Rules): number {
   if (actualUsd <= 0) return 0;
@@ -120,56 +86,37 @@ export function creditedHours(hours: number, gpus: { actualUsd: number; expected
   return hours * gpus.reduce((best, g) => Math.max(best, hourCredit(g.actualUsd, g.expectedUsd, rules)), 0);
 }
 
-/** Token amount (base units) worth the H1 bag at this price: the hold clock starts at this size. */
-export function clockStartTokens(p: PriceContext, rules: Rules): bigint {
-  if (p.priceUsd <= 0) return 0n;
-  return BigInt(Math.ceil((rules.holder.usd[0] / p.priceUsd) * 10 ** p.decimals));
-}
-
 /**
  * Apply an observed on-chain balance change to the wallet state.
- * - The clock is first brought up to `at` at the old bag's speed.
- * - It starts with the first inflow that leaves the bag at the H1 size or more, so dust can't be
- *   parked early to pre-age a wallet. Buying more never moves it, but a bigger bag ticks faster.
- * - Any outflow counts as selling, including wallet-to-wallet transfers, LP and exchange deposits.
- *   Selling a fraction s of the bag takes `sellPenalty` × s of the clock; selling everything resets it.
+ * - An inflow (buying, being paid) adds to the bag, and so to the qualified bag.
+ * - Any outflow counts as selling, including wallet-to-wallet transfers, LP and exchange deposits
+ *   (linked wallets excepted, see links.ts): it takes the amount off the bag and adds
+ *   (`sellMultiplier` − 1) × the amount to the penalty, so the qualified bag drops by 3× the sale.
+ * - Selling everything wipes the penalty: a returning buyer starts fresh.
  */
-export function applyBalanceChange(w: WalletState, delta: bigint, at: number, p: PriceContext, rules: Rules): WalletState {
-  const now = advanceClock(w, at, p, rules);
-  const before = now.balance;
-  const balance = before + delta < 0n ? 0n : before + delta;
-  let clockMs = now.clockMs;
-  if (balance === 0n) {
-    clockMs = null;
-  } else if (delta > 0n && clockMs === null) {
-    if (balance >= clockStartTokens(p, rules)) clockMs = 0;
-  } else if (delta < 0n && clockMs !== null && before > 0n) {
-    const soldFraction = Number(before - balance) / Number(before);
-    clockMs *= Math.max(0, 1 - rules.holder.sellPenalty * soldFraction);
-  }
-  return { ...now, balance, clockMs };
+export function applyBalanceChange(w: WalletState, delta: bigint, rules: Rules): WalletState {
+  if (delta >= 0n) return { ...w, balance: w.balance + delta };
+  const sold = -delta > w.balance ? w.balance : -delta;
+  const balance = w.balance - sold;
+  if (balance === 0n) return { ...w, balance, penalty: 0n };
+  return { ...w, balance, penalty: w.penalty + sold * BigInt(rules.holder.sellMultiplier - 1) };
 }
 
 export interface LevelProgress {
   holderLevel: HolderLevel;
-  /** USD still needed for the next holder level's bag (0 at H3). */
+  /** The qualified bag (USD at the level price). */
+  qualifiedUsd: number;
+  /** The full bag (USD at the level price). */
+  bagUsd: number;
+  /** USD of $HASH to buy (or receive) to reach the next level (0 at Level 3). */
   usdToNextHolder: number;
-  /** Real time (ms) until the hold clock reaches the next level, at the current speed (0 at H3 or if met). */
-  msToNextHolder: number;
-  /** Current clock speed (1× to 3×). */
-  speed: number;
 }
 
-export function holderProgress(w: WalletState, p: PriceContext, now: number, rules: Rules): LevelProgress {
-  const holderLevel = computeHolderLevel(w, p, now, rules);
-  const speed = clockSpeed(w.balance, p, rules);
-  if (holderLevel === 3) return { holderLevel, usdToNextHolder: 0, msToNextHolder: 0, speed };
-  const i = holderLevel; // index of the next level's thresholds
-  const clockLeft = Math.max(0, rules.holder.clockMs[i]! - holdClockMs(w, now, p, rules));
-  return {
-    holderLevel,
-    usdToNextHolder: Math.max(0, rules.holder.usd[i]! - positionUsd(w.balance, p)),
-    msToNextHolder: clockLeft / speed,
-    speed,
-  };
+export function holderProgress(w: WalletState, p: PriceContext, rules: Rules): LevelProgress {
+  const holderLevel = computeHolderLevel(w, p, rules);
+  const q = qualifiedUsd(w, p);
+  // Buying adds to the bag, but the qualified bag only rises once it's above the penalty.
+  const gap = holderLevel === 3 ? 0 : Math.max(0, rules.holder.usd[holderLevel]! - q);
+  const penaltyLeftUsd = Math.max(0, positionUsd(w.penalty, p) - positionUsd(w.balance, p));
+  return { holderLevel, qualifiedUsd: q, bagUsd: positionUsd(w.balance, p), usdToNextHolder: gap > 0 ? gap + penaltyLeftUsd : 0 };
 }

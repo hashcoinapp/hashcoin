@@ -30,7 +30,7 @@ window.HashModel = (function () {
     return RATE.max;
   }
   const MULT = [1, 2, 4];
-  const HOLDER = { usd: [50, 500, 2500], hours: [0, 24, 168] };
+  const HOLDER = { usd: [50, 500, 2500] }; // no hold clock; selling counts 3× (Oct 18)
 
   // Payouts depend on the market only through daily volume per GPU mining (V / N).
   //   V / N = (volume ÷ market cap) × (market cap ÷ holders) ÷ (miners ÷ holders)
@@ -98,7 +98,7 @@ window.HashModel = (function () {
     return { mk, perDay, yieldPct: level > 0 ? 100 * mk.yieldPerDay[level - 1] : 0 };
   }
 
-  // Highest holder level a bag reaches (ignoring the hold clock).
+  // Highest level a (qualified) bag reaches.
   const holderLevelFor = (bagUsd) => (bagUsd >= HOLDER.usd[2] ? 3 : bagUsd >= HOLDER.usd[1] ? 2 : bagUsd >= HOLDER.usd[0] ? 1 : 0);
 
   return { TARGET, RATE, SHARE, HOLDER_MIN_OF_VOLUME, devShareAt, minerMaxAt, rateFor, MULT, HOLDER, ESTIMATE, market, miner, holder, holderLevelFor };

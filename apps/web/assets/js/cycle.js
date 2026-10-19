@@ -249,7 +249,7 @@
   const coin = makeWheel(document.getElementById("fw-coin"), {
     captions: [
       "<b>Miners buy in.</b> Every miner's earnings are swapped into $HASH on the market, around the clock.",
-      "<b>Holders hold.</b> A bigger bag held longer earns a bigger share, so less gets sold.",
+      "<b>Holders hold.</b> A bigger bag earns a bigger share, and selling counts 3× against it, so less gets sold.",
       "<b>Trades fill the reward pot.</b> A 2–5% tax on every buy and sell goes to miners and holders. More trading, bigger rewards.",
       "<b>Both get paid.</b> Miners average up to 5× what they mine. Holders share the rest, at least 1% of every trade.",
       "<b>More people join.</b> Bigger rewards draw more GPUs and holders, and more buying. Around it goes.",
@@ -274,7 +274,7 @@
   const gpu = (window.GPUS || []).find((g) => g.name === "RTX 5090") || { rev: 14.91 };
   const usd = (v) => "$" + (v >= 100 ? fmt(v) : v.toFixed(2));
   const EXAMPLE_BAG = [450, 2200, 6000];
-  const NEXT_NEEDS = { 2: "$500+ held 1 day", 3: "$2,500+ held 7 days" };
+  const NEXT_NEEDS = { 2: "$500+ bag", 3: "$2,500+ bag" };
   const B = (key) => bagRoot.querySelector(`[data-b="${key}"]`);
   const bagNums = (L) => {
     const r = HM ? HM.miner({ myRev: gpu.rev, level: L }) : { mining: 14.91, chestShare: 13.76 * L };
@@ -310,7 +310,7 @@
       "<b>Get $HASH.</b> Buy it, mine it with any PC that has a GPU, or both. Either way it lands in the same bag.",
       "<b>Every trade pays your bag.</b> Holders share at least 1% of every trade. Miners also get a bonus on top.",
       "<b>Your bag grows.</b> Rewards are paid in $HASH, so they start earning too.",
-      "<b>Level up.</b> A bigger bag, held longer, reaches the next level. Buying, mining and rewards all count.",
+      "<b>Level up.</b> A bigger bag reaches the next level. Buying, mining and rewards all count.",
       "<b>A bigger share.</b> Level 2 counts your bag double, Level 3 four times. Then around again.",
     ],
     caption: (i) => (i >= 3 && bagTop ? (i === 3 ? "<b>Top level.</b> Keep holding to stay at Level 3." : "<b>4× share.</b> Level 3 counts your bag four times, for as long as you hold.") : null),

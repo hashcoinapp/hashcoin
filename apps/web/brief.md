@@ -26,7 +26,7 @@ $HASH is a Solana token (Token-2022) with a 2–5% tax on every transfer, buy an
 
 - **Mining adds buying of 1× its value, no more.** A GPU that mines $3.50 a day leads to $3.50 a day of $HASH bought on the market.
 - **The bonus is not new buying.** It is $HASH collected as tax from traders and handed to miners with a bag. So miners are paid by trading volume.
-- **If miners sell what they're paid, mining adds more selling than buying.** That's why the bonus only goes to miners who hold at least $50 of $HASH, grows with the bag (levels), and is scaled by how much of their recent pay they've kept (below). Selling also resets the hold clock. Whether miners hold is still up to them.
+- **If miners sell what they're paid, mining adds more selling than buying.** That's why the bonus only goes to miners who hold at least $50 of $HASH, grows with the bag (levels), and selling counts 3× against the bag (below), so selling pay costs the bonus. Whether miners hold is still up to them.
 - **Holder rewards are trading volume × the tax.** When trading slows, rewards shrink and the tax rises to 5%.
 
 How it works out per mining GPU, if every miner holds a bag (average GPU, $3.50 a day; the engine's own formula):
@@ -57,20 +57,23 @@ The 5× target needs about $370 of daily trading per mining GPU. With 1,000 GPUs
 
 ## Levels
 
-One ladder. The bag sets the level, and the level counts for both holder rewards and the miner bonus.
+One ladder, no hold clock. The **qualified bag** sets the level, and the level counts for both holder rewards and the miner bonus.
 
-| Level | Requirement | Weight |
+**Qualified bag = bag − 2 × what you've sold.** Selling counts 3×: sell $100 of a $500 bag and the bag is $400 but qualifies as $200 (Level 2 → Level 1) until more is bought back. Buying counts at once. Selling everything wipes the count, so a returning buyer starts fresh. It's counted in tokens, from public on-chain transfers.
+
+| Level | Qualified bag | Weight |
 |---|---|---|
-| No bag | Under $50 | Mining is paid; no holder rewards, no bonus |
-| Level 1 | Hold at least $50 of $HASH | 1× |
-| Level 2 | Hold at least $500, with 24 hours on the hold clock | 2× |
-| Level 3 | Hold at least $2,500, with 7 days on the hold clock | 4× |
+| No level | Under $50 | Mining is paid; no holder rewards, no bonus |
+| Level 1 | $50+ | 1× |
+| Level 2 | $500+ | 2× |
+| Level 3 | $2,500+ | 4× |
 
-- **Holder share** = bag × weight.
+- **Holder share** = qualified bag × weight.
 - **Miner bonus share** = √(the GPU's mining earnings in USD) × weight. The square root gives smaller cards a bigger boost relative to what they mine.
 - Mined $HASH counts toward the bag, so a miner can reach Level 1 by mining alone.
-- **Keep what you earn:** the miner bonus is also scaled by how much of the last 14 days' payouts the wallet hasn't sold: kept = 1 − (sent out − bought in) ÷ paid, between 0 and 1. Kept it all, full bonus; sold half, half the bonus; sold it all, none. The bonus given up stays with holders. It's computed from public on-chain transfers.
-- **Hold clock:** starts when a bag first reaches $50 and keeps running through price dips. Bigger bags age faster (1× up to $2,500, 2× at $5,000, 3× at $7,500+). **Selling or sending $HASH out resets it.** Wallets can be linked (by signing a message) so moving between your own wallets doesn't count.
+- **Any transfer out counts as selling**, including to a pool, an exchange or another wallet. Wallets can be linked (by signing a message) so moving between your own wallets doesn't count.
+- A miner who sells their pay drops below their level's line and loses the bonus with it.
+- No hold clock means someone could buy right before a payout; the 2–5% tax each way costs more than a payout pays, so that doesn't pay off.
 - **Prices for levels** use the higher of the 1-hour and 7-day average prices, so a sudden dip doesn't drop a level; a level lost in a long dip returns as soon as the bag is back above the line.
 - Splitting a bag across wallets earns nothing extra: holder rewards follow bag size.
 
@@ -128,7 +131,7 @@ Earnings depend on one ratio: daily trading volume divided by the number of GPUs
 - $HASH is new and volatile and can lose most or all of its value.
 - Payouts depend on trading volume, the number of miners, coin prices and pool results, and can fall to near zero.
 - Mining costs electricity and adds heat and wear to hardware; those costs are the user's.
-- The 2–5% tax applies to every buy, sell and transfer, and selling resets the hold clock.
+- The 2–5% tax applies to every buy, sell and transfer, and selling counts 3× against your level.
 - New software can have bugs. The backend runs on a single server at launch; if it is offline, payouts pause until it is back.
 - The tax authority is held by the project (a 2-of-3 multisig from graduation on). The 2–5% range is the project's published formula, not an on-chain limit; any change is visible on-chain about 4 days before it applies.
 - Payouts are calculated by the project's server. The engine's code is public and every payout is on-chain, but you are trusting the project to run it as published.

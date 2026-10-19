@@ -11,7 +11,7 @@ import { engageKill, holdLoopLock, killReason, releaseKill } from "../src/contro
 import { resolveInFlight } from "../src/inflight.js";
 import { indexTransactions } from "../src/indexer.js";
 import { publicRecord } from "../src/publish.js";
-import { dayKey, emptyLedger, recordPrice, walletFlows } from "../src/ledger.js";
+import { dayKey, emptyLedger, recordPrice } from "../src/ledger.js";
 import { solUsd } from "../src/price.js";
 import { rateProposal } from "../src/proposal.js";
 import { decideRate } from "../src/rate.js";
@@ -37,7 +37,7 @@ const tx = (at: number, ...deltas: [string, number][]): MintTx =>
 const fresh = () => ({ ...emptyLedger("devnet", "mint"), startedAt: 0 });
 
 describe("indexer", () => {
-  it("builds balances and hold clocks from transfers, counting outside trades as volume", () => {
+  it("builds balances from transfers, counting outside trades as volume", () => {
     const l = fresh();
     // Treasury seeds the pool (not volume); Alice buys 2,000 ($100) from the pool; Bob buys dust.
     const vol = indexTransactions(l, [
@@ -49,8 +49,7 @@ describe("indexer", () => {
     expect(l.days[dayKey(t0)]!.volumeTokens).toBeCloseTo(2100, 6);
     expect(l.wallets[TREASURY]).toBeUndefined();
     expect(l.wallets[ALICE]!.balance).toBe(T(1900).toString());
-    expect(l.wallets[ALICE]!.clockMs).toBe(0); // $95 bag ≥ $50: clock starts
-    expect(l.wallets[BOB]!.clockMs).toBeNull(); // $4.75: too small to start the clock
+    expect(l.wallets[ALICE]!.penalty).toBe("0");
     expect(l.tokenAccounts).toContain(`${ALICE}-ata`);
     expect(l.lastSignature).toBe(`sig${n}`);
     expect(l.ownFeesUnharvested).toBe("0"); // the seed transfer had no fee in this example
@@ -71,11 +70,14 @@ describe("indexer", () => {
     expect(l.wallets[ALICE]!.balance).toBe(T(1900).toString());
   });
 
-  it("selling takes time off the clock (2.5× the share sold)", () => {
+  it("selling counts 3× against the qualified bag: the bag drops by the sale, the penalty grows by 2×", () => {
     const l = fresh();
     indexTransactions(l, [tx(t0, [ALICE, 2000])], { price, rules: DEFAULT_RULES, platform });
     indexTransactions(l, [tx(t0 + 10 * HOUR_MS, [ALICE, -200], [POOL, 190])], { price, rules: DEFAULT_RULES, platform });
-    expect(l.wallets[ALICE]!.clockMs).toBeCloseTo(10 * HOUR_MS * 0.75, -3);
+    expect(l.wallets[ALICE]!.balance).toBe(T(1800).toString());
+    expect(l.wallets[ALICE]!.penalty).toBe(T(400).toString());
+    indexTransactions(l, [tx(t0 + 11 * HOUR_MS, [ALICE, -1800], [POOL, 1710])], { price, rules: DEFAULT_RULES, platform });
+    expect(l.wallets[ALICE]!.penalty).toBe("0"); // sold everything: a fresh start
   });
 });
 
@@ -230,33 +232,21 @@ describe("round", () => {
     expect(plan.chestCarryUsd).toBeCloseTo(4.5, 9);
     const miner = plan.payouts.find((p) => p.address === MINER)!;
     expect(miner.usd).toBeCloseTo(0.75, 9);
-    expect(miner.why).toMatch(/no bag/);
+    expect(miner.why).toMatch(/no qualified bag/);
   });
 
-  it("keep what you earn: the indexer tracks payouts, sells and buys; a miner who sold half its pay gets half the bonus weight", () => {
+  it("a miner who sold its pay loses its qualified bag, and with it the bonus", () => {
     const l = ledgerWithHolderAndMiner();
     indexTransactions(l, [
-      tx(t0 - HOUR_MS * 5, [TREASURY, -1_000], [MINER, 1_000]), // paid by us
-      tx(t0 - HOUR_MS * 4, [MINER, -500], [POOL, 500]),         // sold half
+      tx(t0 - HOUR_MS * 5, [TREASURY, -1_000], [MINER, 1_000]), // paid by us: bag 3,000 ($150)
+      tx(t0 - HOUR_MS * 4, [MINER, -1_000], [POOL, 950]),       // sold it: bag 2,000, penalty 2,000
     ], { price, rules: DEFAULT_RULES, platform });
-    const f = walletFlows(l, MINER, t0, 14);
-    expect(f.paid).toBeCloseTo(1_000);
-    expect(f.out).toBeCloseTo(500);
-    expect(f.in).toBeCloseTo(2_000); // the bag it bought two days ago
-    // Its buy covers the sale, so it still counts as having kept everything.
-    expect(planRound({ ...base, ledger: l, now: t0, taxTokens: T(200) }).epoch.lines.find((m) => m.address === MINER)!.kept).toBe(1);
-
-    const l2 = ledgerWithHolderAndMiner();
-    l2.flows = {}; // forget the bag purchase: only the payout and the sale count
-    indexTransactions(l2, [
-      tx(t0 - HOUR_MS * 5, [TREASURY, -1_000], [MINER, 1_000]),
-      tx(t0 - HOUR_MS * 4, [MINER, -500], [POOL, 500]),
-    ], { price, rules: DEFAULT_RULES, platform });
-    const plan = planRound({ ...base, ledger: l2, now: t0, taxTokens: T(200) });
+    const plan = planRound({ ...base, ledger: l, now: t0, taxTokens: T(200) });
     const m = plan.epoch.lines.find((x) => x.address === MINER)!;
-    expect(m.kept).toBeCloseTo(0.5);
-    expect(plan.bonusMinedUsd).toBeCloseTo(0.5); // $1 mined × kept 50%
-    expect(plan.payouts.find((p) => p.address === MINER)!.why).toMatch(/kept 50%/);
+    expect(m.level).toBe(0);
+    expect(m.chestUsd).toBe(0);
+    expect(plan.bonusMinedUsd).toBe(0);
+    expect(plan.payouts.find((p) => p.address === MINER)!.why).toMatch(/no qualified bag/);
   });
 
   it("a buy that can't happen (graduating) keeps the bonus in tokens, so a price crash before the retry can't inflate it", () => {

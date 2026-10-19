@@ -1,7 +1,7 @@
 // What the payout loop remembers between rounds. A JSON file for the devnet rehearsal; Postgres
 // later (docs/TECHNICAL-PLAN.md, Phase 3). Token amounts are base units, stored as strings.
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { DAY_MS, levelPriceUsd, type PendingRecord, type WalletFlows, type WalletState } from "@hashcoin/engine";
+import { levelPriceUsd, type PendingRecord, type WalletState } from "@hashcoin/engine";
 
 /** A payout that failed to send (or couldn't be bought); paid first next round. */
 export interface Owed {
@@ -65,7 +65,8 @@ export interface Funding {
   unassigned: { tokens: string; usd: number };
 }
 
-export interface StoredWallet { balance: string; clockMs: number | null; clockAt: number; firstAt: number }
+/** A wallet's bag and selling penalty (base units, as strings). Ledgers before Oct 18 also hold an old hold clock, now ignored. */
+export interface StoredWallet { balance: string; penalty?: string; firstAt: number }
 
 /** One UTC day of activity, for the tax-rate formula and the public stats. */
 export interface DayStats {
@@ -120,8 +121,6 @@ export interface Ledger {
   /** Spot price samples (USD per token) for the level price: the higher of the 1h and 7-day averages. */
   prices: { at: number; usd: number }[];
   days: Record<string, DayStats>;
-  /** Per wallet, per UTC day: $HASH paid by us, sent out and bought in (keep what you earn). Missing in ledgers before Oct 18. */
-  flows?: Record<string, Record<string, DayFlows>>;
   /** `proposed`: sent to the multisig for signing rather than sent by us. */
   rateChanges: { at: number; bps: number; effectiveEpoch?: number; reason: string; signature?: string; proposed?: string }[];
   paid: Record<string, { miner: string; holder: string }>;
@@ -144,42 +143,10 @@ export function day(l: Ledger, ms: number): DayStats {
 }
 
 export const walletState = (address: string, w: StoredWallet | undefined): WalletState =>
-  ({ address, balance: BigInt(w?.balance ?? "0"), clockMs: w?.clockMs ?? null, clockAt: w?.clockAt ?? 0 });
+  ({ address, balance: BigInt(w?.balance ?? "0"), penalty: BigInt(w?.penalty ?? "0") });
 
 export const storeWallet = (w: WalletState, firstAt: number): StoredWallet =>
-  ({ balance: w.balance.toString(), clockMs: w.clockMs, clockAt: w.clockAt, firstAt });
-
-/** One wallet's $HASH flows for one UTC day, in whole tokens (for "keep what you earn"). */
-export interface DayFlows { paid: number; out: number; in: number }
-
-/** Record a flow from the chain: paid by us, sent out, or bought/received from anyone else. */
-export function recordFlow(l: Ledger, owner: string, at: number, kind: keyof DayFlows, tokens: number) {
-  if (!(tokens > 0)) return;
-  const w = ((l.flows ??= {})[owner] ??= {});
-  const d = (w[dayKey(at)] ??= { paid: 0, out: 0, in: 0 });
-  d[kind] += tokens;
-}
-
-/** A wallet's flows summed over the last `days` days (today included). */
-export function walletFlows(l: Ledger, owner: string, now: number, days: number): WalletFlows {
-  const out: WalletFlows = { paid: 0, out: 0, in: 0 };
-  const w = l.flows?.[owner];
-  if (!w) return out;
-  for (let i = 0; i < days; i++) {
-    const d = w[dayKey(now - i * DAY_MS)];
-    if (d) { out.paid += d.paid; out.out += d.out; out.in += d.in; }
-  }
-  return out;
-}
-
-/** Drop flow days older than `days` (keeps the ledger small). */
-export function pruneFlows(l: Ledger, now: number, days: number) {
-  const oldest = dayKey(now - days * DAY_MS);
-  for (const [owner, w] of Object.entries(l.flows ?? {})) {
-    for (const k of Object.keys(w)) if (k < oldest) delete w[k];
-    if (Object.keys(w).length === 0) delete l.flows![owner];
-  }
-}
+  ({ balance: w.balance.toString(), penalty: w.penalty.toString(), firstAt });
 
 export const addBig = (a: string, b: bigint) => (BigInt(a) + b).toString();
 

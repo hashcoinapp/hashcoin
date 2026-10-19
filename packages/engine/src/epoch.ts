@@ -9,8 +9,6 @@ export interface EpochInput {
   earnings: Map<string, number>;
   wallets: Map<string, WalletState>;
   price: PriceContext;
-  /** Share of recent payouts each wallet has kept (`keptShare`); missing = 1. Scales the bonus. */
-  kept?: Map<string, number>;
   /** Chest for this epoch (USD, from splitTax), plus anything carried from earlier epochs. */
   chestUsd: number;
   /** USD value the float can pay out right now. Immediate payouts are scaled down to fit. */
@@ -22,10 +20,8 @@ export interface EpochInput {
 
 export interface PayoutLine {
   address: string;
-  /** Miner level 0-3: the holder level (0 = no bag, no bonus). */
+  /** Miner level 0-3: the holder level (0 = no qualified bag, no bonus). */
   level: Level;
-  /** Share of recent payouts kept (0 to 1), which scales the bonus. */
-  kept: number;
   holderLevel: HolderLevel;
   miningUsd: number;
   /** Mining paid now, from the float. */
@@ -64,38 +60,35 @@ export interface EpochResult {
   };
 }
 
-const EMPTY_WALLET = (address: string): WalletState => ({ address, balance: 0n, clockMs: null, clockAt: 0 });
+const EMPTY_WALLET = (address: string): WalletState => ({ address, balance: 0n, penalty: 0n });
 
 /**
- * Mining (USD) that earns the bonus: by miners with a bag (holder level 1+), not excluded, each
- * scaled by the share of recent payouts it kept. The chest is sized on this, so miners who keep
- * their earnings average the 5× target; mining without a bag, or by miners who sell their pay,
- * doesn't raise the chest (or the tax), and what it would have taken stays with holders. The
- * chest's 45% floor still applies; with no eligible miner it carries to the next round.
+ * Mining (USD) that earns the bonus: by miners with a qualified bag (level 1+), not excluded. The
+ * chest is sized on this, so they average the 5× target; mining without a qualified bag doesn't raise
+ * the chest (or the tax). The chest's 45% floor still applies; with no eligible miner it carries.
  */
 export function bonusMiningUsd(x: {
-  earnings: Map<string, number>; wallets: Map<string, WalletState>; price: PriceContext; now: number; rules: Rules;
-  excluded?: ReadonlySet<string>; kept?: Map<string, number>;
+  earnings: Map<string, number>; wallets: Map<string, WalletState>; price: PriceContext; rules: Rules;
+  excluded?: ReadonlySet<string>;
 }): number {
   let usd = 0;
   for (const [address, earningsUsd] of x.earnings) {
     if (earningsUsd <= 0 || x.excluded?.has(address)) continue;
     const w = x.wallets.get(address) ?? EMPTY_WALLET(address);
-    if (computeMinerLevel(computeHolderLevel(w, x.price, x.now, x.rules)) > 0) usd += earningsUsd * (x.kept?.get(address) ?? 1);
+    if (computeMinerLevel(computeHolderLevel(w, x.price, x.rules)) > 0) usd += earningsUsd;
   }
   return usd;
 }
 
 export function runEpoch(input: EpochInput): EpochResult {
-  const { rules, price, now } = input;
+  const { rules, price } = input;
   const entries = [...input.earnings]
     .filter(([address, usd]) => usd > 0 && !input.excluded?.has(address))
     .map(([address, earningsUsd]) => {
       const w = input.wallets.get(address) ?? EMPTY_WALLET(address);
-      const holderLevel = computeHolderLevel(w, price, now, rules);
+      const holderLevel = computeHolderLevel(w, price, rules);
       const level = computeMinerLevel(holderLevel);
-      const kept = Math.min(1, Math.max(0, input.kept?.get(address) ?? 1));
-      return { address, earningsUsd, level, holderLevel, kept };
+      return { address, earningsUsd, level, holderLevel };
     });
 
   const shares = chestShares(entries, rules);
@@ -115,7 +108,7 @@ export function runEpoch(input: EpochInput): EpochResult {
     const pendingUsd = e.earningsUsd - immediateUsd;
     chestPaid += chestUsd;
     lines.push({
-      address: e.address, level: e.level, holderLevel: e.holderLevel, kept: e.kept, miningUsd: e.earningsUsd, immediateUsd, pendingUsd,
+      address: e.address, level: e.level, holderLevel: e.holderLevel, miningUsd: e.earningsUsd, immediateUsd, pendingUsd,
       chestShare: share, chestUsd, payNowUsd: immediateUsd + chestUsd,
     });
     if (pendingUsd > 0) {

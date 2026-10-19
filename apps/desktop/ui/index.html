@@ -523,9 +523,9 @@
         <li><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10h11M10 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           <span><b>Payouts.</b> $HASH goes straight to your wallet. A 2–5% tax on every trade pays miners and holders.</span></li>
         <li><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 16V11M10 16V7M16 16V3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
-          <span><b>Levels.</b> Hold $50 of $HASH for Level 1: holder rewards and the miner bonus. Bigger bags held longer reach Levels 2 and 3.</span></li>
+          <span><b>Levels.</b> Hold $50 of $HASH for Level 1: holder rewards and the miner bonus. $500 is Level 2 and $2,500 is Level 3.</span></li>
         <li><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 3.5 5.5v4c0 3.8 2.7 6.9 6.5 8 3.8-1.1 6.5-4.2 6.5-8v-4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
-          <span><b>Keep what you earn.</b> Keeping your payouts gets you the full miner bonus.</span></li>
+          <span><b>Selling counts 3×.</b> Sell $100 and your bag counts $300 less for your level, until you buy back.</span></li>
       </ul>
       <p>Earnings are estimates. They move with coin prices and trading.</p>
     </section>
@@ -590,20 +590,20 @@
   // rewards and the miner bonus alike; mining without a bag is paid in $HASH with no bonus (Oct 18).
   const LEVELS = [
     { k: "L1", give: "Holder rewards and the miner bonus", needs: [{ what: "bag", n: 50 }] },
-    { k: "L2", give: "2× holder rewards and miner bonus", needs: [{ what: "bag", n: 500 }, { what: "clock", n: 24 }] },
-    { k: "L3", give: "4× holder rewards and miner bonus", needs: [{ what: "bag", n: 2500 }, { what: "clock", n: 168 }] },
+    { k: "L2", give: "2× holder rewards and miner bonus", needs: [{ what: "bag", n: 500 }] },
+    { k: "L3", give: "4× holder rewards and miner bonus", needs: [{ what: "bag", n: 2500 }] },
   ];
 
   let last = null, account = null, stats = null, prices = null, editingWallet = false, coinTab = "hash";
 
   function needRow(nd, a) {
-    const v = { hours: a?.hoursMinedInWindow ?? 0, bag: a?.balanceUsd ?? 0, clock: a?.holdClockHours ?? 0, holder: a?.holderLevel ?? 0 }[nd.what];
+    // The bag that counts is the qualified bag: selling counts 3× against it (Oct 18).
+    const v = { hours: a?.hoursMinedInWindow ?? 0, bag: a?.qualifiedUsd ?? a?.balanceUsd ?? 0, holder: a?.holderLevel ?? 0 }[nd.what];
     const pct = Math.min(1, v / nd.n), met = v >= nd.n;
     const text = {
-      hours: `Mine ${nd.n} hours in 14 days`, bag: `Hold ${usd(nd.n)} of $HASH`,
-      clock: nd.n >= 48 ? `Keep it ${nd.n / 24} days` : `Keep it ${nd.n} hours`, holder: `Reach holder level H${nd.n}`,
+      hours: `Mine ${nd.n} hours in 14 days`, bag: `Hold ${usd(nd.n)} of $HASH`, holder: `Reach holder level H${nd.n}`,
     }[nd.what];
-    const amt = { hours: `${v.toFixed(0)} / ${nd.n} h`, bag: `${usd(v)} / ${usd(nd.n)}`, clock: `${v.toFixed(0)} / ${nd.n} h`, holder: met ? "Done" : v ? `You're H${v}` : "Not yet" }[nd.what];
+    const amt = { hours: `${v.toFixed(0)} / ${nd.n} h`, bag: `${usd(v)} / ${usd(nd.n)}`, holder: met ? "Done" : v ? `You're H${v}` : "Not yet" }[nd.what];
     return { pct, met, html: `<div class="need${met ? " met" : ""}"><span class="tick"></span><span>${text}</span><span class="amt n">${amt}</span><span class="bar"><i data-w="${(100 * pct).toFixed(1)}"></i></span></div>` };
   }
 
@@ -635,12 +635,12 @@
     $("pending").textContent = a ? usd(a.pendingUsd ?? 0) : "–";
     ladder($("level-ladder"), "Level", LEVELS, a?.holderLevel ?? 0, a, "Hold $50 of $HASH for holder rewards and the miner bonus. Without a bag, your mining is still paid in $HASH.");
     $("levels-note").textContent = a ? "" : "Updates after your first payout";
-    // Keep what you earn: the share of the last 14 days' payouts not sold scales the miner bonus.
-    const kept = a?.keptShare;
-    $("kept-note").hidden = kept == null;
-    if (kept != null) $("kept-note").textContent = kept >= 0.995
-      ? "You've kept all you earned in the last 14 days, so you get the full miner bonus."
-      : `You've kept ${Math.round(100 * kept)}% of what you earned in the last 14 days, so your miner bonus is ${Math.round(100 * kept)}% of the full amount. Keep what you earn to get it all.`;
+    // Selling counts 3×: when the qualified bag is below the bag, say so and what buying back takes.
+    const q = a?.qualifiedUsd, bag = a?.balanceUsd;
+    const sold = q != null && bag != null && bag - q > 0.01;
+    $("kept-note").hidden = !sold;
+    if (sold) $("kept-note").textContent = `Your bag is ${usd(bag)}, but it counts as ${usd(q)} because selling counts 3×.`
+      + (a.usdToNextLevel > 0 ? ` Buy ${usd(a.usdToNextLevel)} to reach the next level.` : "");
   }
 
   function renderSplit() {
