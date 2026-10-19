@@ -137,8 +137,11 @@ export interface Ledger {
    * out" total). Missing in ledgers before Oct 19, which only have the token totals.
    */
   totals: { minerTokens: string; holderTokens: string; devTokens: string; taxTokens: string; volumeTokens: string; minerUsd?: number; holderUsd?: number };
-  /** GPUs mining at the last collector run, per wallet (the public "miners" count and the live calculator). */
-  miningNow?: { at: number; gpus: Record<string, number> };
+  /**
+   * At the last collector run: GPUs hashing, per wallet (the public "miners" count and the live
+   * calculator), and their combined current hashrate per coin, in H/s. `hashrate` is missing before Oct 19.
+   */
+  miningNow?: { at: number; gpus: Record<string, number>; hashrate?: Record<string, number> };
 }
 
 export function emptyLedger(network: string, mint: string): Ledger {

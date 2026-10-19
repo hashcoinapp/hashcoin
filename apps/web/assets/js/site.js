@@ -136,10 +136,10 @@
     });
   });
 
-  // Live mode: the stats strip's height comes off the hero, so both fit the first screen.
-  const stripEl = $(".stat-strip");
+  // Live mode, big screens: the stats band sits above the hero; its height comes off the hero's.
+  const stripEl = $(".live-band");
   if (stripEl && CFG.mode === "live") {
-    const fitStrip = () => root.style.setProperty("--strip-h", stripEl.offsetHeight + "px");
+    const fitStrip = () => root.style.setProperty("--band-h", (innerWidth >= 1180 ? stripEl.offsetHeight : 0) + "px");
     fitStrip();
     window.addEventListener("resize", fitStrip);
   }

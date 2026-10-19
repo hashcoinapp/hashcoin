@@ -113,10 +113,19 @@ async function collectTick() {
     const report = await runCollector(false);
     const wallets = walletsOf(report);
     for (const w of wallets) { credit(w.wallet, w.minedUsd); ledger.hoursInWindow[w.wallet] = w.hoursInWindow; }
-    // GPUs mining now, per wallet (a wallet can show up under more than one coin).
-    const gpus: Record<string, number> = {};
-    for (const w of wallets) gpus[w.wallet] = (gpus[w.wallet] ?? 0) + w.gpus.length;
-    ledger.miningNow = { at: now, gpus };
+    // GPUs hashing now, per wallet (a wallet can show up under more than one coin; the pool also
+    // lists workers that went offline), and their combined current hashrate per coin.
+    const gpus: Record<string, number> = {}, hashrate: Record<string, number> = {};
+    for (const [coin, c] of Object.entries(report)) {
+      const ws = (c as { wallets?: typeof wallets } | null)?.wallets;
+      if (!Array.isArray(ws)) continue;
+      for (const w of ws) for (const g of w.gpus) {
+        if (!(g.hashrateNow > 0)) continue;
+        gpus[w.wallet] = (gpus[w.wallet] ?? 0) + 1;
+        hashrate[coin] = (hashrate[coin] ?? 0) + g.hashrateNow;
+      }
+    }
+    ledger.miningNow = { at: now, gpus, hashrate };
     // What was credited, per coin, waits to be sold (`ctl sold` trues held-back mining up to the sale).
     for (const [coin, c] of Object.entries(report)) {
       const ws = (c as { wallets?: { minedCoins: number; minedUsd: number }[] } | null)?.wallets;
@@ -537,7 +546,7 @@ async function roundTick() {
   rounds.push(summary);
   writeFileSync(ROUNDS, JSON.stringify(rounds.slice(-500)));
   writeFileSync(dataPath(rt, "rounds", `round-${l.round}.json`), JSON.stringify(detail, big, 2));
-  writeFileSync(dataPath(rt, "public.json"), JSON.stringify(publicRecord(l, { now, price, levelPrice, rules, excluded, explorer, rate: { bps: fee.bps, scheduled: fee.scheduled ? { bps: fee.scheduled.bps, epoch: fee.scheduled.epoch } : undefined }, rounds, market: marketStatus }), big, 2));
+  writeFileSync(dataPath(rt, "public.json"), JSON.stringify(publicRecord(l, { now, price, levelPrice, rules, excluded, explorer, rate: { bps: fee.bps, scheduled: fee.scheduled ? { bps: fee.scheduled.bps, epoch: fee.scheduled.epoch } : undefined }, rounds, market: marketStatus, schedule: { roundMinutes: cfg.roundMinutes, holderEveryRounds: cfg.holderEveryRounds } }), big, 2));
 
   // 8. Float check for the next rounds.
   if (market && floatUsd < cfg.alerts.floatLowUsd) await alerts.raise("float-low", "warning", `the SOL float is $${floatUsd.toFixed(2)} (${Number(floatLamports) / 1e9} SOL above the reserve), under $${cfg.alerts.floatLowUsd}: new mining is held back until it's topped up (curve fee claims or coin sales)`);

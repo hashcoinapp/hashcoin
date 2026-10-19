@@ -1,10 +1,10 @@
 # Hashcoin ($HASH): research brief
 
 <!-- Mode blocks: build_pages.mjs keeps the prelaunch or the live blocks (config.js `mode`) and fills the {{...}} values. -->
-A plain fact sheet about Hashcoin for people and AI assistants researching it: what it is, how it works, the numbers, the weak points, and how to check each claim. It's written by the project, so check the claims rather than taking them on trust; the last section says how. Nothing here is financial advice or a promise of returns.
+A plain fact sheet about Hashcoin for people and AI assistants researching it: what it is, how it works, the numbers, the risks, and how to check each claim. It's written by the project, so check the claims rather than taking them on trust; the last section says how. Nothing here is financial advice or a promise of returns.
 
 <!-- prelaunch -->
-- Status: **pre-launch** (this version: October 18, 2026). Launch is planned for late October 2026; the date is announced on the website.
+- Status: **pre-launch** (this version: October 19, 2026). **Launch: Saturday, October 24, 2026, 1 pm ET (17:00 UTC)**, with a countdown on the website.
 <!-- /prelaunch -->
 <!-- live -->
 - Status: **live** since {{launchDate}}. It trades on a Meteora bonding curve until the curve fills, then on a Meteora DAMM v2 pool.
@@ -94,7 +94,7 @@ One ladder, no hold clock. The **qualified bag** sets the level, and the level c
 ## Payouts
 
 - **Miners:** about every 10 minutes, in $HASH, straight to their wallet. Mined coins can take hours to confirm and sell, so about 75% of the estimated mining value is paid right away and the rest once the coin is sold, trued up to the actual sale price. Overpayments are absorbed by the platform, never clawed back.
-- **Holders:** hourly or daily (still being decided before launch).
+- **Holders:** about every hour at launch (the payout settings can change it if transaction costs require).
 - **Mined $HASH counts as a bag**, so miners also earn holder rewards and can reach higher levels.
 - **Our own payouts pay the tax too** (Token-2022 has no exemptions). The platform sends a little extra so recipients get the full amount.
 - **Public record:** every payout is a Solana transaction. <!-- prelaunch -->After launch the website lists payouts with Solscan links and shows what each level was actually paid in the last 24 hours.<!-- /prelaunch --><!-- live -->The website's Live tab (https://hashcoin.app/#live) lists recent payouts with Solscan links; the raw record is at https://api.hashcoin.app/v1/stats.<!-- /live -->
@@ -129,6 +129,9 @@ Earnings depend on one ratio: daily trading volume divided by the number of GPUs
 
 ## The Windows app
 
+<!-- prelaunch -->
+- **Download:** opens at launch, from the website (current build: version 0.1.3).
+<!-- /prelaunch -->
 - Windows, with an NVIDIA, AMD or Intel Arc GPU: gaming PCs, gaming laptops, AI rigs, editing and render workstations.
 - Mines only on GPU power that isn't in use; when a game or render needs the GPU, mining steps back.
 - Downloads only miners whose hash matches a signed list. Coin assignments are signed, so a hijacked connection can't redirect mining.

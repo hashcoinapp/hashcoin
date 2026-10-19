@@ -35,7 +35,8 @@ export interface WalletResult {
   minedUsd: number;
   /** Before the true-up to the pool's actual credits (set by the run, not by `collect`). */
   estimatedUsd?: number;
-  gpus: { worker: string; gpu: string; hashrate: number; expected: number; credit: number; flagged?: string }[];
+  /** `hashrate`: the GPU's 3-hour average (H/s); `hashrateNow`: its current session rate, 0 when offline. */
+  gpus: { worker: string; gpu: string; hashrate: number; hashrateNow: number; expected: number; credit: number; flagged?: string }[];
 }
 
 export interface CollectInput {
@@ -141,7 +142,7 @@ export function collect(x: CollectInput): CollectResult {
     estimatedCoins += coins;
     r.minedCoins += coins;
     r.minedUsd += coins * x.priceUsd;
-    r.gpus.push({ worker: w.worker, gpu: rec.gpu, hashrate: avg3h, expected, credit, ...(flagged ? { flagged } : {}) });
+    r.gpus.push({ worker: w.worker, gpu: rec.gpu, hashrate: avg3h, hashrateNow: hs, expected, credit, ...(flagged ? { flagged } : {}) });
     byWallet.set(rec.wallet, r);
   }
 

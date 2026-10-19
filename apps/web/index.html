@@ -84,16 +84,6 @@
 </header>
 <main id="main">
 
-  <!-- LIVE STATS (live mode): from the payout loop's public record, every minute -->
-  <section class="stat-strip" data-mode="live" aria-label="$HASH now">
-    <dl class="wrap strip">
-      <div><dt>Market cap</dt><dd data-st="mcap">—</dd></div>
-      <div><dt>Mining now</dt><dd data-st="miners">—</dd></div>
-      <div><dt>Ready to pay out</dt><dd data-st="ready">—</dd></div>
-      <div><dt>Paid out so far</dt><dd><span data-st="paid">—</span> <small data-st="paid-tokens"></small></dd></div>
-    </dl>
-  </section>
-
   <!-- HERO -->
   <section class="hero" aria-labelledby="hero-title">
     <div class="wrap hero-split">
@@ -115,7 +105,6 @@
         </div>
         <div class="hero-ca" data-mode="live">
           <button class="ca-copy" type="button" data-ca><span class="ca-k">CA</span><code class="ca-text" data-ca-text></code><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></svg></button>
-          <span class="chart-links"><a href="#launch" data-link="dexscreener">DexScreener</a><a href="#launch" data-link="birdeye">Birdeye</a><a href="#launch" data-link="solscan">Solscan</a></span>
         </div>
       </div>
 
@@ -271,6 +260,16 @@
         <p class="fly-note" id="fly-note" hidden>Example: a sample bag at each level and an RTX 5090, at launch-week trading. An estimate, not a promise.</p>
       </div>
     </div>
+  </section>
+
+  <!-- LIVE STATS (live mode): four numbers from the payout loop's public record (live.js). The detail is in the Live tab. -->
+  <section class="live-band" data-mode="live" aria-label="$HASH now">
+    <dl class="wrap band">
+      <div class="bstat"><dt>Paid out so far</dt><dd data-st="paid">—</dd><p data-st="paid-tokens"></p></div>
+      <div class="bstat"><dt>Waiting for the next round</dt><dd data-st="ready">—</dd><p>in <span data-st="next">--:--</span></p></div>
+      <div class="bstat"><dt>Market cap</dt><dd data-st="mcap">—</dd><p data-st="price"></p></div>
+      <div class="bstat"><dt>Mining now</dt><dd data-st="hashrate" title="Combined hashrate of the GPUs mining Pearl (PRL) right now">—</dd><p data-st="miner-gpus"></p></div>
+    </dl>
   </section>
 
   <!-- EXPLORE: one topic at a time -->
@@ -627,10 +626,10 @@
               <div class="panel-head"><span class="live-dot">Payouts</span><span class="tag" data-s="updated">Loading</span></div>
               <div class="panel-body">
                 <dl class="stat-grid">
-                  <div><dt>Tax now</dt><dd data-s="rate">—</dd></div>
-                  <div><dt>Traded, 24h</dt><dd data-s="volume">—</dd></div>
-                  <div><dt>Paid out, 24h</dt><dd data-s="paid">—</dd></div>
-                  <div><dt>Wallets</dt><dd data-s="wallets">—</dd></div>
+                  <div><dt>Tax now</dt><dd data-st="rate">—</dd></div>
+                  <div><dt>Next round</dt><dd data-st="next">—</dd></div>
+                  <div><dt>24h volume</dt><dd data-st="volume">—</dd></div>
+                  <div><dt>Holders</dt><dd data-st="holders">—</dd></div>
                 </dl>
                 <div class="live-split" data-s="split-wrap" hidden>
                   <div class="split-bar three" role="img" data-s="split"><div class="d"></div><div class="m"></div><div class="h"></div></div>

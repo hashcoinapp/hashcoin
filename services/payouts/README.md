@@ -19,9 +19,10 @@ Written after every round (`src/publish.ts`): price, market and funding, tax rat
 
 For the site's live mode (Oct 19) the record also has:
 - `marketCapUsd` (price × `supplyTokens`, all 21M, the way charts show a fixed-supply token).
-- `miners`: `{ gpus, wallets, at }` mining at the last collector run (`miningNow` in the ledger, written by each collector tick); `null` if the collector hasn't run in 2 hours.
+- `miners`: `{ gpus, wallets, hashrate, at }` at the last collector run (`miningNow` in the ledger, written by each collector tick): GPUs with a current hashrate (the pool also lists workers that went offline; those aren't counted), the wallets they belong to, and their combined current hashrate per coin in H/s (`{ PRL: 2.87e16 }`, from the collector's `hashrateNow`); `null` if the collector hasn't run in 2 hours.
 - `readyToPayUsd`: tax collected and not yet paid out: harvested but not yet split, plus the bonus and holder pots carried to the next round.
 - `paidUsd`: `{ miners, holders, total }`, miner and holder payouts all time in USD when planned (`totals.minerUsd` / `holderUsd`, booked in `recordSent`); `null` on ledgers from before Oct 19.
+- `walletsPaid` (wallets ever paid a miner or holder payout), `holders` (wallets holding $HASH now), `recent` (`{ "6h": { paidUsd, rounds }, "24h": ... }`, rolling, from the rounds kept, at the current price), `schedule` (`nextRoundAt`, `nextHolderRoundAt`, from `roundMinutes` and `holderEveryRounds`).
 - `calc`: the last 24 hours' payout rates for the site's calculators (`liveRates`): from the rounds of the last 24 hours (rolling, scaled to a day when fewer), the GPUs mining now and today's bags. `bonusPerSqrtUsdDay` × √(a GPU's $/day) × level weight (1/2/4) is a miner's bonus a day; `holderPerWeightedUsdDay` × qualified bag × level weight is a holder's rewards a day. Each GPU's weight uses the average GPU's mining (as the site's estimate does). `null` before two rounds; a rate is `null` with nothing to divide by, and the site then shows its pre-launch estimate.
 
 On the PC the loop runs as the startup task "Hashcoin Payouts" (`infra/pc/payouts-autostart.ps1`, `run-payouts.ps1`, `stop-payouts.ps1`; `docs/HOSTING.md`), logging to `loop.log` in the data folder.

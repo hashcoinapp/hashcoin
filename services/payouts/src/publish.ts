@@ -101,6 +101,8 @@ export function publicRecord(l: Ledger, x: {
   rate: { bps: number; scheduled?: { bps: number; epoch: number } }; rounds: RoundSummary[]; market?: MarketStatus;
   /** Total supply in whole tokens (default 21,000,000). */
   supplyTokens?: number;
+  /** Round timing, for the site's "next round" countdown: a round every `roundMinutes`, holders every `holderEveryRounds`. */
+  schedule?: { roundMinutes: number; holderEveryRounds: number };
 }) {
   const levelPrice = x.levelPrice ?? x.price;
   const tokens = (s: string) => Number(BigInt(s)) / 10 ** x.price.decimals;
@@ -143,14 +145,37 @@ export function publicRecord(l: Ledger, x: {
     network: l.network, mint: l.mint, updatedAt: new Date(x.now).toISOString(), round: l.round, priceUsd: x.price.priceUsd, levelPriceUsd: levelPrice.priceUsd,
     // Price × all 21M tokens (unsold curve tokens included), the way charts show a fixed-supply token.
     supplyTokens, marketCapUsd: x.price.priceUsd * supplyTokens,
-    /** GPUs and wallets mining at the last collector run; null if it hasn't run in the last 2 hours. */
-    miners: fresh ? { gpus: miningWallets.reduce((s, [, n]) => s + n, 0), wallets: miningWallets.length, at: new Date(l.miningNow!.at).toISOString() } : null,
+    /**
+     * GPUs and wallets hashing at the last collector run, and their current hashrate per coin (H/s,
+     * e.g. { PRL: 2.5e16 }); null if the collector hasn't run in the last 2 hours.
+     */
+    miners: fresh ? {
+      gpus: miningWallets.reduce((s, [, n]) => s + n, 0), wallets: miningWallets.length,
+      hashrate: l.miningNow!.hashrate ?? {}, at: new Date(l.miningNow!.at).toISOString(),
+    } : null,
     /** Tax collected and not yet paid out: harvested but not yet split, plus the bonus and holder pots carried to the next round. */
     readyToPayUsd: tokens(l.taxUnallocated) * x.price.priceUsd + l.chestCarryUsd + l.holderCarryUsd,
     /** Miner and holder payouts, all time, in USD when planned (null on ledgers from before this was kept). */
     paidUsd: l.totals.minerUsd != null || l.totals.holderUsd != null
       ? { miners: l.totals.minerUsd ?? 0, holders: l.totals.holderUsd ?? 0, total: (l.totals.minerUsd ?? 0) + (l.totals.holderUsd ?? 0) } : null,
     calc: liveRates({ now: x.now, rounds: x.rounds, rules: x.rules, gpus: fresh, wallets }),
+    /** Payouts in the last 6 and 24 hours (rolling, from the rounds kept), at the current price, and how many rounds. */
+    recent: Object.fromEntries(([["6h", 6], ["24h", 24]] as const).map(([k, hrs]) => {
+      const rs = x.rounds.filter((r) => Date.parse(r.at) > x.now - hrs * 3_600_000);
+      return [k, { paidUsd: rs.reduce((s, r) => s + r.paidTokens, 0) * x.price.priceUsd, rounds: rs.length }];
+    })) as Record<"6h" | "24h", { paidUsd: number; rounds: number }>,
+    /** Wallets ever paid a miner or holder payout, and wallets holding $HASH now (ours and pools left out). */
+    walletsPaid: Object.keys(l.paid).filter((a) => !x.excluded.has(a)).length,
+    holders: Object.entries(l.wallets).filter(([a, s]) => !x.excluded.has(a) && BigInt(s.balance) > 0n).length,
+    /** When the next round and the next holder payout are due (rounds run on a timer; this is written at the end of one). */
+    schedule: x.schedule ? (() => {
+      const every = Math.max(1, x.schedule.holderEveryRounds), ms = x.schedule.roundMinutes * 60_000;
+      return {
+        roundMinutes: x.schedule.roundMinutes, holderEveryRounds: every,
+        nextRoundAt: new Date(x.now + ms).toISOString(),
+        nextHolderRoundAt: new Date(x.now + (every - (l.round % every)) * ms).toISOString(),
+      };
+    })() : null,
     market: x.market ?? null,
     funding: {
       partnerFeesClaimedSol: Number(BigInt(l.funding.partnerFeesLamports)) / 1e9,

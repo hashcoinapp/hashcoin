@@ -603,7 +603,7 @@ describe("live numbers for the website (public record)", () => {
     l.taxUnallocated = T(1_000).toString(); // $50 at $0.05
     l.chestCarryUsd = 2;
     l.holderCarryUsd = 3;
-    l.miningNow = { at: t0 - HOUR_MS, gpus: { [MINER]: 2, [BOB]: 1, [DEV]: 1 } };
+    l.miningNow = { at: t0 - HOUR_MS, gpus: { [MINER]: 2, [BOB]: 1, [DEV]: 1 }, hashrate: { PRL: 4.5e14 } };
     const owed = [
       { address: MINER, usd: 3, buyUsd: 1, kind: "miner" as const, why: "" },
       { address: ALICE, usd: 2, kind: "holder" as const, why: "" },
@@ -615,11 +615,19 @@ describe("live numbers for the website (public record)", () => {
     expect(r.supplyTokens).toBe(21_000_000);
     expect(r.marketCapUsd).toBeCloseTo(1_050_000);
     expect(r.readyToPayUsd).toBeCloseTo(55);
-    expect(r.miners).toMatchObject({ gpus: 3, wallets: 2 }); // the dev wallet isn't counted
+    expect(r.miners).toMatchObject({ gpus: 3, wallets: 2, hashrate: { PRL: 4.5e14 } }); // the dev wallet isn't counted
     expect(r.paidUsd).toEqual({ miners: 3, holders: 2, total: 5 });
     // A collector that hasn't run for over 2 hours: no miner count rather than an old one.
     expect(rec(l, t0 + 2 * HOUR_MS).miners).toBeNull();
     // Older ledgers have only the token totals.
     expect(rec(fresh(), t0).paidUsd).toBeNull();
+    expect(r.walletsPaid).toBe(2); // the miner and Alice; dev payouts aren't counted
+    const withRounds = rec(l, t0, [round(t0 - 7 * HOUR_MS, 1, 1, 1), round(t0 - HOUR_MS, 1, 1, 1)].map((r) => ({ ...r, paidTokens: 100 })));
+    expect(withRounds.recent).toEqual({ "6h": { paidUsd: 5, rounds: 1 }, "24h": { paidUsd: 10, rounds: 2 } });
+    expect(r.schedule).toBeNull();
+    l.round = 7;
+    const s = publicRecord(l, { now: t0, price, rules: DEFAULT_RULES, excluded: platform, explorer: (x) => x, rate: { bps: 500 }, rounds: [], schedule: { roundMinutes: 10, holderEveryRounds: 6 } }).schedule!;
+    expect(Date.parse(s.nextRoundAt) - t0).toBe(10 * 60_000);
+    expect(Date.parse(s.nextHolderRoundAt) - t0).toBe(5 * 10 * 60_000); // round 12 pays holders
   });
 });

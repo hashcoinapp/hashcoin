@@ -1,6 +1,6 @@
 // Live mode: the payout loop's public record (<api>/v1/stats, services/payouts/src/publish.ts), every
-// minute while the page is visible. Fills the home page's stats strip (market cap, mining now, ready to
-// pay out, paid out so far) and Live tab (the tax now and its split, the last 24 hours, what each level
+// minute while the page is visible. Fills the home page's stats row (paid out so far, waiting for the
+// next round, market cap, hashrate on Pearl) and Live tab (the tax now and its split, the last 24 hours, what each level
 // was paid, recent payouts with Solscan links, launch curve or DAMM v2 pool), and gives the last 24
 // hours' payout rates to the earnings calculators (HashModel.setLive, then an "hc:stats" event).
 (function () {
@@ -26,18 +26,47 @@
     }
   }
 
-  // The strip: four numbers, each kept on one line; "—" until there's a value.
+  // The stats row (home page: paid out so far, waiting for the next round, market cap, mining now)
+  // and the Live tab's few numbers. "—" until there's a value.
   const tokensShort = (n) => n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 1 : 2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1) + "K" : count(n);
-  function strip(st) {
-    const set = (k, v) => document.querySelectorAll(`[data-st="${k}"]`).forEach((el) => (el.textContent = v));
+  const priceFmt = (v) => (v >= 1 ? F.usd(v) : "$" + v.toPrecision(3).replace(/0+$/, ""));
+  // H/s to the largest unit that keeps it at 1 or more: 2.87e16 → "28.7 PH/s".
+  const hashFmt = (hs) => {
+    const units = ["H/s", "kH/s", "MH/s", "GH/s", "TH/s", "PH/s", "EH/s"];
+    let i = 0;
+    while (hs >= 1000 && i < units.length - 1) { hs /= 1000; i++; }
+    return (hs >= 100 ? hs.toFixed(0) : hs >= 10 ? hs.toFixed(1) : hs.toFixed(2)) + " " + units[i];
+  };
+  const until = (iso) => {
+    const s = Math.round((Date.parse(iso) - Date.now()) / 1000);
+    if (s <= 0) return "a moment";
+    return s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  };
+  const set = (k, v) => document.querySelectorAll(`[data-st="${k}"]`).forEach((el) => (el.textContent = v));
+  let LAST = null;
+  // The countdown to the next round moves on its own, every second.
+  setInterval(() => { if (!document.hidden && LAST && LAST.schedule) set("next", until(LAST.schedule.nextRoundAt)); }, 1000);
+  function band(st) {
+    LAST = st;
     if (!st) return;
-    set("mcap", st.marketCapUsd ? F.usd(st.marketCapUsd) : "—");
-    set("miners", st.miners ? `${count(st.miners.gpus)} GPU${st.miners.gpus === 1 ? "" : "s"}` : "—");
-    set("ready", st.readyToPayUsd != null ? F.usd(st.readyToPayUsd) : "—");
     const t = st.totals || {};
     const paidTokens = (t.paidToMinersTokens || 0) + (t.paidToHoldersTokens || 0);
     set("paid", st.paidUsd ? F.usd(st.paidUsd.total) : st.priceUsd ? F.usd(paidTokens * st.priceUsd) : "—");
     set("paid-tokens", paidTokens ? tokensShort(paidTokens) + " $HASH" : "");
+    set("ready", st.readyToPayUsd != null ? F.usd(st.readyToPayUsd) : "—");
+    set("next", st.schedule ? until(st.schedule.nextRoundAt) : "—");
+    set("mcap", st.marketCapUsd ? F.usd(st.marketCapUsd) : "—");
+    set("price", st.priceUsd ? priceFmt(st.priceUsd) + " per $HASH" : "");
+    // Mining now: the GPUs' combined hashrate on Pearl, with the GPU count under it (just the count
+    // if the loop doesn't publish a hashrate).
+    const gpus = st.miners ? `${count(st.miners.gpus)} GPU${st.miners.gpus === 1 ? "" : "s"}` : "";
+    const prl = st.miners && st.miners.hashrate ? st.miners.hashrate.PRL : 0;
+    set("hashrate", prl > 0 ? hashFmt(prl) : gpus || "—");
+    set("miner-gpus", prl > 0 ? gpus : "");
+    const rate = st.taxRate || {};
+    set("rate", rate.bps != null ? pct(rate.bps) + (rate.scheduled ? ` → ${pct(rate.scheduled.bps)}` : "") : "—");
+    set("volume", st.last24h ? F.usd(st.last24h.volumeUsd) : "—");
+    set("holders", st.holders != null ? count(st.holders) : "—");
   }
 
   // The calculators: the last 24 hours' rates, or the pre-launch estimate when there are none.
@@ -56,18 +85,13 @@
   }
 
   function render(st) {
-    strip(st);
+    band(st);
     share(st);
     if (!box) return;
     box.classList.remove("is-down");
     const ageMin = Math.max(0, Math.round((Date.now() - Date.parse(st.updatedAt)) / 60000));
     S("updated").textContent = ageMin < 1 ? "Updated just now" : ageMin < 120 ? `Updated ${ageMin} min ago` : `Updated ${time(st.updatedAt)}`;
 
-    const rate = st.taxRate || {};
-    S("rate").textContent = rate.bps != null ? pct(rate.bps) + (rate.scheduled ? ` → ${pct(rate.scheduled.bps)}` : "") : "—";
-    S("volume").textContent = st.last24h ? F.usd(st.last24h.volumeUsd) : "—";
-    S("paid").textContent = st.last24h ? F.usd(st.last24h.paidUsd) : "—";
-    S("wallets").textContent = typeof st.wallets === "number" ? count(st.wallets) : "—";
 
     // The split of the latest round's tax.
     const r0 = (st.rounds || [])[0];

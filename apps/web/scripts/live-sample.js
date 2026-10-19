@@ -22,35 +22,39 @@
     ],
   });
   document.documentElement.dataset.mode = "live";
-  // A launch day: $100K market cap, $30K traded, 412 GPUs mining, the 5% curve tax (dev 5%, miners
-  // 75%: the cap, as miners are below 5×; holders 20%). Rounds every 10 minutes, holders paid hourly.
-  const PRICE = 0.0048;
+  // A launch day at the estimate's own ratio: $504K market cap, $150K traded, 200 GPUs mining
+  // ($750 a GPU), on the curve's fixed 5% tax: dev 5%, miners 45% (the floor; their bag miners average
+  // about 7×), holders 50%. Rounds every 10 minutes, holders paid hourly.
+  const PRICE = 0.024;
   const round = (i, holders) => ({
-    round: 140 - i, at: ago(4 + 10 * i), rateBps: 500, taxUsd: 10.42, minedUsd: 9.86,
-    split: { devUsd: 0.52, chestUsd: 7.81, holderUsd: 2.08 },
-    miners: 412 - 3 * i, holders, paidTokens: 0, transactions: [tx(i * 3 + 1), tx(i * 3 + 2)],
+    round: 140 - i, at: ago(4 + 10 * i), rateBps: 500, taxUsd: 52.08, minedUsd: 4.86,
+    split: { devUsd: 2.6, chestUsd: 23.44, holderUsd: 26.04 },
+    miners: 196 - i, holders, paidTokens: 0, transactions: [tx(i * 3 + 1), tx(i * 3 + 2)],
   });
   window.HASHCOIN_SAMPLE_STATS = {
     network: "mainnet", mint: window.HASHCOIN.ca, updatedAt: ago(4), round: 140, priceUsd: PRICE, levelPriceUsd: PRICE,
     supplyTokens: 21000000, marketCapUsd: PRICE * 21000000,
-    miners: { gpus: 412, wallets: 288, at: ago(3) },
-    readyToPayUsd: 9.7,
-    paidUsd: { miners: 2545, holders: 300, total: 2845 },
+    miners: { gpus: 200, wallets: 151, hashrate: { PRL: 2.87e16 }, at: ago(3) },
+    readyToPayUsd: 128.4,
+    paidUsd: { miners: 4075, holders: 3624, total: 7699 },
+    walletsPaid: 1214, holders: 2310,
+    recent: { "6h": { paidUsd: 1925, rounds: 36 }, "24h": { paidUsd: 7699, rounds: 140 } },
+    schedule: { roundMinutes: 10, holderEveryRounds: 6, nextRoundAt: new Date(Date.now() + 6 * 60000).toISOString(), nextHolderRoundAt: new Date(Date.now() + 46 * 60000).toISOString() },
     calc: {
-      hours: 24, taxUsdDay: 1500, minedUsdDay: 1420, minerBonusUsdDay: 1125, holderUsdDay: 300,
-      gpus: 412, minedUsdPerGpuDay: 3.45, bagShare: 0.8, avgMinerMult: 2.2,
-      bonusPerSqrtUsdDay: 1125 / (Math.sqrt(3.45) * 412 * 0.8 * 2.2),
-      holderPerWeightedUsdDay: 300 / 300000,
+      hours: 24, taxUsdDay: 7500, minedUsdDay: 700, minerBonusUsdDay: 3375, holderUsdDay: 3750,
+      gpus: 200, minedUsdPerGpuDay: 3.5, bagShare: 0.8, avgMinerMult: 2.2,
+      bonusPerSqrtUsdDay: 3375 / (Math.sqrt(3.5) * 200 * 0.8 * 2.2),
+      holderPerWeightedUsdDay: 3750 / 1200000,
     },
     market: { phase: "curve", priceSol: 0.0000255, solUsd: 188, curveProgress: 0.62, floatSol: 3.1, floatUsd: 583 },
     taxRate: { bps: 500, scheduled: null, changes: [] },
-    totals: { paidToMinersTokens: 2545 / PRICE, paidToHoldersTokens: 300 / PRICE, paidToDevTokens: 75 / PRICE, taxTokens: 1500 / PRICE, rounds: 140, indexedTransactions: 18400 },
-    last24h: { volumeUsd: 30000, minedUsd: 1420, taxUsd: 1500, paidUsd: 2845 },
-    last7d: { volumeUsd: 30000, minedUsd: 1420, taxUsd: 1500, paidUsd: 2845 },
-    carry: { minerBonusUsd: 0, holderPotUsd: 9.7, heldBackMiningUsd: 355 },
-    levels24h: { 1: { wallets: 690, paidUsd: 172 }, 2: { wallets: 410, paidUsd: 328 }, 3: { wallets: 140, paidUsd: 925 } },
+    totals: { paidToMinersTokens: 4075 / PRICE, paidToHoldersTokens: 3624 / PRICE, paidToDevTokens: 375 / PRICE, taxTokens: 7500 / PRICE, rounds: 140, indexedTransactions: 18400 },
+    last24h: { volumeUsd: 150000, minedUsd: 700, taxUsd: 7500, paidUsd: 7699 },
+    last7d: { volumeUsd: 150000, minedUsd: 700, taxUsd: 7500, paidUsd: 7699 },
+    carry: { minerBonusUsd: 0, holderPotUsd: 128.4, heldBackMiningUsd: 175 },
+    levels24h: { 1: { wallets: 690, paidUsd: 760 }, 2: { wallets: 410, paidUsd: 1980 }, 3: { wallets: 140, paidUsd: 4385 } },
     rounds: [round(0, 0), round(1, 0), round(2, 1214), round(3, 0), round(4, 0), round(5, 0)]
-      .map((r) => ({ ...r, paidTokens: (r.split.chestUsd + r.minedUsd * 0.75 + (r.holders ? 12.5 : 0)) / PRICE })),
+      .map((r) => ({ ...r, paidTokens: (r.split.chestUsd + r.minedUsd * 0.75 + (r.holders ? 156 : 0)) / PRICE })),
     wallets: 2310,
   };
 })();

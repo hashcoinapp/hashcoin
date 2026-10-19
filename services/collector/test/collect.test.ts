@@ -59,6 +59,9 @@ describe("collector", () => {
     expect(b.wallets).toHaveLength(1);
     expect(b.wallets[0]!.hoursCredited * 60).toBeCloseTo(5);
     expect(b.wallets[0]!.gpus).toHaveLength(2);
+    expect(b.wallets[0]!.gpus.map((g) => g.hashrateNow / TH)).toEqual([130, 20]);
+    const off = run(now + 5 * MIN, [worker("habc-0", 130, now + 5 * MIN), { ...worker("habc-1", 20, now + 5 * MIN), status: "offline" }], b.state);
+    expect(off.wallets[0]!.gpus.map((g) => g.hashrateNow / TH)).toEqual([130, 0]); // listed, but not hashing
   });
 
   it("gives a new session full credit for its first hour, then judges it (live test: 51 TH/s reported for 125)", () => {

@@ -12,7 +12,7 @@ window.HASHCOIN = Object.assign({
   // The API (services/api on the backend PC, reached through the Cloudflare Tunnel).
   api: "https://api.hashcoin.app",
   // ISO 8601 launch time, e.g. "2026-12-01T17:00:00Z". null shows "to be announced".
-  launchAt: null,
+  launchAt: "2026-10-24T17:00:00Z", // Sat Oct 24, 1 pm EDT (user, Oct 19)
   // Token contract address. Published on this site first, at launch. Never before.
   ca: null,
   // true opens the waitlist form (it posts to <api>/v1/waitlist). Turn it on once the API answers
