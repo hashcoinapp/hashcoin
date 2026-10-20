@@ -164,9 +164,11 @@ jobs:
           } > "$RUNNER_TEMP/release-notes.md"
 
       # Tag builds: GitHub's signed record of which commit and workflow built the installer, so anyone
-      # can check it with `gh attestation verify <installer> --repo <owner>/<repo>` (public repos only).
+      # can check it with `gh attestation verify <installer> --repo <owner>/<repo>`. GitHub only allows
+      # this on public repos, so it's skipped while the repo is private (until launch); re-run the
+      # release build after making it public to add it.
       - uses: actions/attest-build-provenance@v2
-        if: startsWith(github.ref, 'refs/tags/desktop-v')
+        if: startsWith(github.ref, 'refs/tags/desktop-v') && github.event.repository.visibility == 'public'
         with:
           subject-path: apps/desktop/target/release/bundle/nsis/release/*-setup.exe
 
