@@ -174,13 +174,14 @@ fn status(rt: State<Shared>) -> Status { rt.lock().unwrap().status() }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct AppInfo { version: String, test_build: bool, updates: bool, source_url: String, safety_url: String, av_help_url: String }
+struct AppInfo { version: String, test_build: bool, updates: bool, source_url: String, safety_url: String, av_help_url: String, demo: bool }
 
 #[tauri::command]
 fn app_info(app: AppHandle) -> AppInfo {
     AppInfo {
         version: app.package_info().version.to_string(), test_build: TEST_TRUSTED_KEY.is_some(), updates: updates_configured(&app),
         source_url: SOURCE_URL.into(), safety_url: SAFETY_URL.into(), av_help_url: AV_HELP_URL.into(),
+        demo: cfg!(feature = "demo"),
     }
 }
 

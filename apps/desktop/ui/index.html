@@ -111,18 +111,20 @@
   .coin.on .edge { stroke: var(--gold); animation: turn 48s linear infinite; }
   .coin.on::after { content: ""; position: absolute; inset: -18px; border-radius: 50%; background: radial-gradient(closest-side, var(--gold-soft), transparent); z-index: -1; }
   @keyframes turn { to { transform: rotate(360deg); } }
-  /* Speed ring: the card's live hashrate against its benchmark, in the tier's colour. The worse the
-     tier, the thicker, brighter and faster it pulses. */
-  .halo { position: absolute; inset: -13px; border-radius: 50%; border: var(--ring-w, 2px) solid var(--tier, transparent); box-shadow: 0 0 var(--ring-glow, 0) var(--tier, transparent), inset 0 0 calc(var(--ring-glow, 0) / 2) var(--tier, transparent); opacity: 0; pointer-events: none; transition: opacity .6s, border-color .6s, box-shadow .6s; }
-  .coin[data-tier] .halo { opacity: 1; animation: halo var(--beat) ease-in-out infinite; }
-  .coin[data-tier].on::after { background: radial-gradient(closest-side, color-mix(in srgb, var(--tier) 20%, transparent), transparent); }
-  @keyframes halo { 0%, 100% { transform: scale(1); opacity: var(--rest); } 50% { transform: scale(var(--grow)); opacity: 1; } }
-  .coin[data-tier="great"] { --tier: var(--t-great); --ring-w: 2px; --ring-glow: 10px; --beat: 4.2s; --rest: .45; --grow: 1.015; }
-  .coin[data-tier="good"] { --tier: var(--t-good); --ring-w: 2px; --ring-glow: 12px; --beat: 3.6s; --rest: .55; --grow: 1.02; }
-  .coin[data-tier="ok"] { --tier: var(--t-ok); --ring-w: 3px; --ring-glow: 18px; --beat: 2.6s; --rest: .65; --grow: 1.03; }
-  .coin[data-tier="bad"] { --tier: var(--t-bad); --ring-w: 3px; --ring-glow: 26px; --beat: 1.7s; --rest: .75; --grow: 1.045; }
-  .coin[data-tier="terrible"] { --tier: var(--t-terrible); --ring-w: 4px; --ring-glow: 36px; --beat: 1.05s; --rest: .8; --grow: 1.06; }
-  @media (prefers-reduced-motion: reduce) { .coin[data-tier] .halo { animation: none; } }
+  /* Speed ring: the coin's dotted edge takes the tier's colour (live hashrate against the card's
+     benchmark) and glows. The worse the tier, the thicker, brighter and faster it pulses. */
+  .coin[data-tier].on .edge { stroke: var(--tier); stroke-width: var(--edge-w); animation: turn 48s linear infinite, edge-pulse var(--beat) ease-in-out infinite; }
+  .coin[data-tier].on::after { background: radial-gradient(closest-side, color-mix(in srgb, var(--tier) 22%, transparent), transparent); }
+  @keyframes edge-pulse {
+    0%, 100% { opacity: var(--rest); filter: drop-shadow(0 0 calc(var(--edge-glow) / 3) var(--tier)); }
+    50% { opacity: 1; filter: drop-shadow(0 0 var(--edge-glow) var(--tier)); }
+  }
+  .coin[data-tier="great"] { --tier: var(--t-great); --edge-w: 3; --edge-glow: 4px; --beat: 4.2s; --rest: .7; }
+  .coin[data-tier="good"] { --tier: var(--t-good); --edge-w: 3; --edge-glow: 5px; --beat: 3.6s; --rest: .7; }
+  .coin[data-tier="ok"] { --tier: var(--t-ok); --edge-w: 3.6; --edge-glow: 7px; --beat: 2.6s; --rest: .75; }
+  .coin[data-tier="bad"] { --tier: var(--t-bad); --edge-w: 4.2; --edge-glow: 9px; --beat: 1.7s; --rest: .8; }
+  .coin[data-tier="terrible"] { --tier: var(--t-terrible); --edge-w: 5; --edge-glow: 12px; --beat: 1.05s; --rest: .85; }
+  @media (prefers-reduced-motion: reduce) { .coin[data-tier].on .edge { animation: none; filter: drop-shadow(0 0 var(--edge-glow) var(--tier)); } }
   .speed { margin: 8px 0 0; color: var(--muted); font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
   .speed b { color: var(--text); }
   .speed .tier { font-weight: 700; color: var(--tier); }
@@ -143,6 +145,7 @@
   .stat .v { font-size: 15px; font-weight: 700; }
   .big .v { font-size: 26px; letter-spacing: -.02em; }
   .big .sub { color: var(--muted); font-size: 12.5px; }
+  .demo-note { grid-column: 1 / -1; color: var(--dim); font-size: 11px; }
 
   /* Cards list */
   .rows { display: grid; }
@@ -386,7 +389,6 @@
 
       <div class="panel miner">
         <button class="coin" id="coin" aria-pressed="false" aria-label="Start mining">
-          <span class="halo" aria-hidden="true"></span>
           <svg viewBox="-12 -12 124 124" aria-hidden="true">
             <circle class="edge" cx="50" cy="50" r="57" fill="none" stroke-width="3" stroke-dasharray="1.2 4.77"/>
             <circle class="face" cx="50" cy="50" r="50"/>
@@ -404,6 +406,7 @@
         <div class="stat big"><div class="label">Balance</div><div class="v n" id="bal">–</div><div class="sub" id="bal-usd"></div></div>
         <div class="stat"><div class="label">Paid to you</div><div class="v n" id="paid">–</div></div>
         <div class="stat" title="Part of each mining payout is sent once the coin your card mined is sold."><div class="label">Still coming</div><div class="v n" id="pending">–</div></div>
+        <div class="demo-note" id="demo-note" hidden>Example numbers for illustration</div>
       </div>
 
       <div class="panel">
@@ -708,8 +711,11 @@
     $("px").textContent = `$${now.toFixed(now < 1 ? 4 : 2)}`;
     $("px-chg").textContent = `${chg >= 0 ? "+" : ""}${(100 * chg).toFixed(1)}%`;
     $("px-chg").className = `chg ${chg >= 0 ? "up" : "down"}`;
-    $("px-range").textContent = "this week";
+    // $HASH: 21,000,000 supply, all in circulation, so market cap = price × 21M.
+    $("px-range").textContent = coinTab === "hash" ? `this week · MC ${mcap(now * 21e6)}` : "this week";
   }
+
+  const mcap = (v) => (v >= 1e9 ? `$${(v / 1e9).toFixed(2)}B` : v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `$${Math.round(v / 1e3)}K` : usd(v));
 
   function showWalletForm(show) {
     editingWallet = show;
@@ -950,6 +956,7 @@
 
   // ---- Updates: checked at start and every 6 hours; installed only when the user clicks ----
   let info = null, updateNote = "";
+  const infoReady = invoke("app_info").catch(() => null);
   const versionLine = () => { if (info) $("version").textContent = `Version ${info.version}${info.testBuild ? " (test build)" : ""}${updateNote ? ` · ${updateNote}` : ""}`; };
   async function checkUpdate() {
     if (!info?.updates) { updateNote = info ? "Updates not set up in this build" : ""; return versionLine(); }
@@ -974,13 +981,41 @@
       $("error").hidden = false; $("error").textContent = String(e);
     });
   };
-  invoke("app_info").then((i) => {
+  infoReady.then((i) => {
+    if (!i) return;
     info = i; versionLine(); setTimeout(checkUpdate, 5000);
+    $("demo-note").hidden = !i.demo;
     $("l-safety").hidden = !i.safetyUrl || i.safetyUrl.includes(".invalid"); // the site's page isn't up yet
   });
   setInterval(checkUpdate, 6 * 3600 * 1000);
 
-  const get = (what) => invoke("server_get", { what }).catch(() => null);
+  const fetchServer = (what) => invoke("server_get", { what }).catch(() => null);
+  // Demo build (promo recordings): example wallet and $HASH chart; mining and Pearl's price stay real.
+  const get = async (what) => {
+    if (!(await infoReady)?.demo) return fetchServer(what);
+    if (what === "wallet") return demoWallet();
+    if (what === "prices") return { ...(await fetchServer("prices")), hash: { points: demoHashPoints() } };
+    return fetchServer(what);
+  };
+  function demoHashPoints() {
+    // A week of hourly prices climbing from about $0.24 to $0.38 ($5M to $8M market cap) with
+    // ordinary swings, the same every run.
+    let seed = 11, walk = 0;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const end = Date.now(), pts = [];
+    for (let h = 168; h >= 0; h--) {
+      const f = 1 - h / 168;
+      walk = walk * 0.92 + (rnd() - 0.5) * 0.05;
+      const trend = 0.24 * Math.pow(0.381 / 0.24, f) * (1 - 0.06 * Math.sin(f * 9));
+      pts.push([end - h * 3600e3, Number((trend * (1 + (h ? walk : 0))).toFixed(4))]);
+    }
+    return pts;
+  }
+  function demoWallet() {
+    const price = demoHashPoints().at(-1)[1], bal = 9640;
+    return { priceUsd: price, balanceTokens: bal, balanceUsd: bal * price, qualifiedUsd: bal * price, holderLevel: 3, usdToNextLevel: 0,
+      paidTokens: { miner: 312.4, holder: 148.7 }, pendingUsd: 1.86 };
+  }
   const refreshAccount = async () => { account = await get("wallet"); renderAccount(); };
   const refreshMarket = async () => { [stats, prices] = await Promise.all([get("stats"), get("prices")]); renderSplit(); renderPrice(); };
   const run = (cmd, args) => invoke(cmd, args).then(render).catch((e) => { $("error").hidden = false; $("error").textContent = String(e); });

@@ -1,6 +1,6 @@
 [package]
 name = "hashcoin-miner"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 description = "Hashcoin Miner desktop app"
 
@@ -20,6 +20,9 @@ tauri-plugin-single-instance = "2"
 [features]
 # Lets a debug build trust the local dev API's throwaway key via HASHCOIN_DEV_PUBKEY.
 dev-key = []
+# Example balance, Level 3 and a $HASH chart for promo recordings (mining stays real). Built only by
+# hand (`cargo build --release --features demo`), never by the release workflow; it says so on screen.
+demo = []
 
 [target."cfg(windows)".dependencies]
 windows = { version = "0.62", features = ["Win32_Graphics_Dxgi", "Win32_Foundation"] }

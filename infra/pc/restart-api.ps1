@@ -13,11 +13,15 @@ $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 if (-not $isAdmin) { Write-Host "Open PowerShell with 'Run as administrator' and run this again." -ForegroundColor Red; exit 1 }
 
 Stop-ScheduledTask -TaskName $TaskName
-Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | ForEach-Object {
-  Write-Host "Ending process $($_.OwningProcess) on port $Port"
-  Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue
+# netstat, not Get-NetTCPConnection: that WMI class is missing on some PCs (it fails with "Invalid
+# class"), which left the old API running and the new one failing with EADDRINUSE.
+function PortOwners { netstat -ano | Select-String "^\s*TCP\s+\S+:$Port\s+\S+\s+LISTENING\s+(\d+)" | ForEach-Object { [int]$_.Matches[0].Groups[1].Value } | Sort-Object -Unique }
+foreach ($id in PortOwners) {
+  Write-Host "Ending process $id on port $Port (and what it started)"
+  taskkill /PID $id /T /F | Out-Null
 }
 Start-Sleep -Seconds 2
+if (PortOwners) { Write-Host "Something still holds port $Port; end it in Task Manager (node.exe) and run this again." -ForegroundColor Red; exit 1 }
 Start-ScheduledTask -TaskName $TaskName
 Write-Host "Started; waiting for the API..."
 foreach ($i in 1..30) {
