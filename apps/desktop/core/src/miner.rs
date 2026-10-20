@@ -188,7 +188,7 @@ mod tests {
             v: 1, rig_id: "pc".into(), wallet: "W".into(), gpu_index: 0, gpu: "RTX 4070".into(), coin: "PRL".into(),
             algo: "pearlhash".into(), miner_id: "prl-miner".into(),
             pool: PoolTarget { url: "stratum+tcp://p:1".into(), user: "W.pc-0".into(), pass: "x".into() },
-            expected_usd_per_day: 2.9, reason: String::new(), issued_at: 0, expires_at: 1,
+            expected_usd_per_day: 2.9, expected_hashrate: None, reason: String::new(), issued_at: 0, expires_at: 1,
         }
     }
 

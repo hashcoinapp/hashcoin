@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { applyPayoutAddresses, loadSigningKey, newSigningKey, rawPublicKey } from "@hashcoin/switcher";
+import { applyPayoutAddresses, gpuKey, loadSigningKey, newSigningKey, rawPublicKey } from "@hashcoin/switcher";
 import { loadHashrateNoQuotes } from "./quotes.js";
 import { isLoopbackHost } from "./guard.js";
 import { createApi, type WorkerRecord } from "./server.js";
@@ -15,6 +15,15 @@ cfg.coins = payout.coins;
 for (const n of payout.notes) console.log(n);
 const minerManifest = JSON.parse(readFileSync(here("../config/miners.json"), "utf8"));
 const quotes = loadHashrateNoQuotes(here("../../../data/hashrate-no-gpus-2026-10-03.json"));
+// Benchmark hashrate per card model and coin (the collector's catalog, from hashrate.no), sent with
+// each assignment so the app can show how well a card is mining.
+const benchmarks = new Map<string, number>();
+try {
+  const collector = JSON.parse(readFileSync(here("../../collector/config/collector.json"), "utf8"));
+  for (const [coin, c] of Object.entries<{ catalog?: Record<string, number> }>(collector.coins ?? {})) {
+    for (const [gpu, hs] of Object.entries(c.catalog ?? {})) benchmarks.set(`${coin}:${gpuKey(gpu)}`, hs);
+  }
+} catch (e) { console.warn(`No hashrate benchmarks: ${(e as Error).message}`); }
 
 const mainnet = process.env.HASH_NETWORK === "mainnet";
 
@@ -89,6 +98,7 @@ const { server } = createApi({
   platformSell: () => ({}), // TODO: feed from the treasury's actual daily sell volume per coin
   minerManifest, signingKey: loadSigningKey(pem), kid: process.env.HASH_SIGNING_KID ?? "dev",
   onAssign: remember,
+  expectedHashrate: (coin, gpu) => benchmarks.get(`${coin}:${gpuKey(gpu)}`),
   prices,
   publicRecord: () => {
     try { return JSON.parse(readFileSync(publicPath, "utf8")); } catch { return null; }

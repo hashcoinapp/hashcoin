@@ -19,6 +19,7 @@ const api = createApi({
   coins: cfg.coins, quotes, policy: cfg.policy, score: cfg.score, ttlMs: cfg.ttlMs, platformSell: () => ({}),
   minerManifest: { version: 1, miners: [] }, signingKey: key, kid: "t1", now: () => clock,
   onAssign: (w) => recorded.push(w),
+  expectedHashrate: (coin, gpu) => (coin === "PRL" && gpu === "NVIDIA GeForce RTX 4070" ? 115.5e12 : undefined),
   publicRecord: () => ({ round: 3, wallets: { [WALLET]: { holderLevel: 2 } } }),
   appUpdate: () => appFeed,
 });
@@ -41,6 +42,8 @@ describe("api", () => {
     // No AMD miner yet that Windows Defender doesn't flag (see services/api/config/coins.json).
     expect(body.results[1]!.assignment).toBeNull();
     expect(a!.expiresAt - a!.issuedAt).toBe(cfg.ttlMs);
+    // The card's benchmark rides along, signed, so the app can show how well it mines.
+    expect(a!.expectedHashrate).toBe(115.5e12);
   });
 
   it("keeps the coin across check-ins (hysteresis state)", async () => {

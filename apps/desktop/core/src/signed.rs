@@ -56,6 +56,10 @@ pub struct Assignment {
     pub miner_id: String,
     pub pool: PoolTarget,
     pub expected_usd_per_day: f64,
+    /// What this card model should reach on this coin (H/s, a public benchmark), for the speed
+    /// stat. Absent for cards without one, and from servers before Oct 19.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_hashrate: Option<f64>,
     pub reason: String,
     pub issued_at: u64,
     pub expires_at: u64,

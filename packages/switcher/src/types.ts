@@ -79,6 +79,9 @@ export interface Assignment {
   pool: { url: string; user: string; pass: string };
   /** Expected net USD/day used for the decision (for display). */
   expectedUsdPerDay: number;
+  /** What this card model should reach on this coin (H/s, a public benchmark), so the app can show
+   *  how well it's mining. Absent for cards without a benchmark. Added by the API, Oct 19. */
+  expectedHashrate?: number;
   reason: string;
   issuedAt: number;
   expiresAt: number;

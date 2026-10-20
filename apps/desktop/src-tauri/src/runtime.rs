@@ -6,6 +6,7 @@ use hashcoin_core::{
     gpu::parse_video_controllers,
     manifest::{extract_zip, platform_key, verify_download},
     miner::{render_command, MinerState, Supervisor},
+    speed::{forge_summary_hashrate, Meter, Tier},
     plan, Action, Assignment, Envelope, Gpu, Guard, KeyRing, Limits, MinerManifest, Readings, SafetySettings, Vendor,
 };
 use serde::{Deserialize, Serialize};
@@ -91,6 +92,13 @@ pub struct GpuStatus {
     pub temp_c: Option<u32>,
     pub coin: Option<String>,
     pub expected_usd_per_day: Option<f64>,
+    /// Live hashrate (H/s, the last minute's average), read from the miner.
+    pub hashrate: Option<f64>,
+    /// What this card model should reach on its coin (H/s), when there's a benchmark for it.
+    pub expected_hashrate: Option<f64>,
+    /// Live hashrate as a % of the benchmark, once the miner has warmed up.
+    pub efficiency: Option<f64>,
+    pub tier: Option<Tier>,
     pub reason: String,
     pub state: String,
 }
@@ -148,6 +156,8 @@ struct Slot {
     reason: String,
     /// Why the safety guard is holding this GPU back (too hot, PC in use, a game running).
     paused: Option<String>,
+    /// The running miner's live hashrate.
+    meter: Option<Meter>,
 }
 
 pub struct Runtime {
@@ -191,7 +201,7 @@ impl Runtime {
 
     pub fn set_gpus(&mut self, gpus: Vec<Gpu>) {
         self.stop();
-        self.slots = gpus.into_iter().enumerate().map(|(id, gpu)| Slot { id: id as u32, gpu, assignment: None, supervisor: None, reason: "not started".into(), paused: None }).collect();
+        self.slots = gpus.into_iter().enumerate().map(|(id, gpu)| Slot { id: id as u32, gpu, assignment: None, supervisor: None, reason: "not started".into(), paused: None, meter: None }).collect();
         self.guard = Guard::default();
     }
 
@@ -304,6 +314,25 @@ impl Runtime {
             }
         }
         if let Some(why) = blocked { self.block(why); }
+        self.read_speeds();
+    }
+
+    /// Read each running miner's live hashrate from its local API (ForgeMiner's `/summary` on the
+    /// port the app gave it). Other miners show no speed yet.
+    fn read_speeds(&mut self) {
+        let now = Instant::now();
+        for s in &mut self.slots {
+            let running = match s.supervisor.as_ref().map(|x| &x.state) {
+                Some(MinerState::Running { pid, since }) => Some((*pid, *since)),
+                _ => None,
+            };
+            let forge = s.assignment.as_ref().is_some_and(|a| a.miner_id == "forgeminer");
+            let Some((pid, since)) = running.filter(|_| forge) else { s.meter = None; continue };
+            if s.meter.as_ref().is_none_or(|m| m.pid != pid) { s.meter = Some(Meter::new(pid, since)); }
+            let url = format!("http://127.0.0.1:{}/summary", api_port(s.id));
+            let body = ureq::get(&url).timeout(Duration::from_millis(800)).call().ok().and_then(|r| r.into_string().ok());
+            if let (Some(h), Some(m)) = (body.as_deref().and_then(forge_summary_hashrate), s.meter.as_mut()) { m.add(now, h); }
+        }
     }
 
     /// Measure what the safety settings need (temperatures always; input and GPU use only when
@@ -410,7 +439,7 @@ impl Runtime {
         }
         // Verified and unpacked, but quarantined straight away?
         if let Some(why) = exe_blocked(&exe_state(&exe)) { return Err(LaunchError::Blocked(why)); }
-        let args = render_command(spec, a, device, 4067 + slot as u16, &self.settings.limits())?;
+        let args = render_command(spec, a, device, api_port(slot), &self.settings.limits())?;
         // One log per GPU next to the miner, kept small: started fresh on each launch.
         let log = dir.join(format!("gpu-{slot}.log"));
         let _ = std::fs::write(&log, format!("--- {} {}
@@ -436,6 +465,10 @@ impl Runtime {
                 temp_c: if self.mining { self.guard.temp(s.id) } else { None },
                 coin: s.assignment.as_ref().map(|a| a.coin.clone()),
                 expected_usd_per_day: s.assignment.as_ref().map(|a| a.expected_usd_per_day),
+                hashrate: s.meter.as_ref().and_then(|m| m.hashrate()),
+                expected_hashrate: s.assignment.as_ref().and_then(|a| a.expected_hashrate),
+                efficiency: s.meter.as_ref().and_then(|m| m.percent(s.assignment.as_ref().and_then(|a| a.expected_hashrate), Instant::now())),
+                tier: s.meter.as_ref().and_then(|m| m.percent(s.assignment.as_ref().and_then(|a| a.expected_hashrate), Instant::now())).map(Tier::of),
                 reason: s.paused.clone().unwrap_or_else(|| s.reason.clone()),
                 state: match (&s.paused, s.supervisor.as_ref().map(|x| &x.state)) {
                     (Some(_), _) => "paused".into(),
@@ -447,6 +480,9 @@ impl Runtime {
         }
     }
 }
+
+/// The local port a slot's miner serves its stats on (read-only, this PC only).
+fn api_port(slot: u32) -> u16 { 4067 + slot as u16 }
 
 /// After a supervisor tick: does the way the miner ended (or failed to restart) look like antivirus?
 fn blocked_by(sup: &mut Supervisor) -> Option<String> {

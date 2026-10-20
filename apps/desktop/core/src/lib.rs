@@ -12,6 +12,7 @@ pub mod manifest;
 pub mod miner;
 pub mod safety;
 pub mod signed;
+pub mod speed;
 pub mod wallet;
 
 pub use agent::{plan, Action};

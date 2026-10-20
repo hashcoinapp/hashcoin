@@ -19,6 +19,8 @@ export interface ApiDeps {
   signingKey: KeyObject;
   kid: string;
   now?: () => number;
+  /** A card model's benchmark hashrate (H/s) on a coin, if known; sent with the assignment. */
+  expectedHashrate?: (coin: string, gpu: string) => number | undefined;
   /** Called for every assignment handed out, so the collector can map pool workers back to wallets. */
   onAssign?: (w: WorkerRecord) => void;
   /** The payout loop's public record (services/payouts data/public.json), or null before the first round. */
@@ -184,6 +186,8 @@ export function createApi(deps: ApiDeps): { server: Server; state: Map<string, G
         const key = `${wallet}:${rigId}:${g.index}`;
         const r = assignGpu({ wallet, rigId }, g, state.get(key) ?? null, t, ctx);
         state.set(key, r.state);
+        const expected = r.assignment ? deps.expectedHashrate?.(r.assignment.coin, g.name) : undefined;
+        if (r.assignment && expected && expected > 0) r.assignment = { ...r.assignment, expectedHashrate: Math.round(expected) };
         lastSeen.set(key, t);
         if (r.assignment) {
           const worker = r.assignment.pool.user.slice(r.assignment.pool.user.lastIndexOf(".") + 1);

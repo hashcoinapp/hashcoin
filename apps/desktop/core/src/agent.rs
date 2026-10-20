@@ -30,7 +30,7 @@ mod tests {
         Assignment {
             v: 1, rig_id: "pc".into(), wallet: "W".into(), gpu_index: 0, gpu: "g".into(), coin: coin.into(), algo: coin.into(),
             miner_id: "m".into(), pool: PoolTarget { url: "stratum+tcp://p:1".into(), user: "W.pc-0".into(), pass: "x".into() },
-            expected_usd_per_day: 1.0, reason: String::new(), issued_at: 0, expires_at: exp,
+            expected_usd_per_day: 1.0, expected_hashrate: None, reason: String::new(), issued_at: 0, expires_at: exp,
         }
     }
 
