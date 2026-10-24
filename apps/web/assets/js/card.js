@@ -76,7 +76,10 @@
       const rank = (g) => { const n = norm(g.name); return (n === q || n.endsWith(q) ? 0 : 2) + (n.startsWith(q) ? 0 : 1); };
       // Ties keep the list's own order (fastest first), with estimated laptop cards after measured ones.
       options = GPUS.filter((g) => norm(g.name).includes(q)).sort((a, b) => rank(a) - rank(b) || (a.est ? 1 : 0) - (b.est ? 1 : 0) || GPUS.indexOf(a) - GPUS.indexOf(b)).slice(0, 60);
-      html = options.length ? options.map(optionHtml).join("") : `<li class="empty" role="presentation">No GPU matches. Try "4070" or "6700".</li>`;
+      const soon = options.length ? null : (window.GPUS_SOON || []).find((n) => norm(n).includes(q));
+      html = options.length ? options.map(optionHtml).join("")
+        : soon ? `<li class="empty" role="presentation">${soon} isn't supported yet. NVIDIA cards mine at launch; AMD and Intel are coming.</li>`
+        : `<li class="empty" role="presentation">No GPU matches. Try "4070" or "3060".</li>`;
     }
     list.innerHTML = html;
     active = -1;

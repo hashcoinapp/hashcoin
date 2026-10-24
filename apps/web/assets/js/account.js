@@ -37,7 +37,7 @@
       <button class="icon-btn" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div data-view="pick">
-      <p class="acct-lede">See your bag, your level and what you've been paid. It only needs your public address: never your seed phrase, and no signature.</p>
+      <p class="acct-lede">See your bag, your level and what you've been paid. Use the wallet you hold $HASH in. It only needs your public address: never your seed phrase, and no signature.</p>
       <div class="acct-wallets" data-wallets-found></div>
       <form class="acct-paste" data-paste novalidate>
         <label for="acct-addr">Or paste your public wallet address</label>

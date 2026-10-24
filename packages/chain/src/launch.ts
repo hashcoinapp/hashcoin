@@ -13,12 +13,13 @@ import {
 export const LAUNCH = {
   supply: 21_000_000,
   decimals: 6,
-  /** The tax while on the curve. Fixed until graduation; after it our formula sets 2–5%. */
-  taxBps: 500,
+  /** The tax while on the curve. Fixed until graduation; after it our formula sets 2–5%. 2% (the bottom of
+   *  the range) from launch day, Oct 24 (user); it was 5%. */
+  taxBps: 200,
   /** Share of supply moved into the DAMM v2 pool at graduation (the rest is sold on the curve). */
   percentToPool: 25,
-  /** Curve fee: starts at 20% against snipers and falls linearly to 1% over the first 5 minutes. */
-  curveFee: { startBps: 2000, endBps: 100, periods: 60, seconds: 300 },
+  /** Curve fee: a flat 1% from the first second (user, launch day Oct 24: no 20% anti-sniper start). */
+  curveFee: { startBps: 100, endBps: 100, periods: 0, seconds: 0 },
   /** DAMM v2 pool fee after graduation, paid to us in SOL (compoundingFeeBps 0). */
   poolFeeBps: 25,
   /** Our 3% dev bag, bought openly as the first swap (net of the tax). Was 1% until Oct 24 (user). */

@@ -270,6 +270,15 @@
       });
       sel.append(og);
     });
+    // Cards that don't mine at launch (AMD, Intel, older NVIDIA): named, not selectable.
+    if ((window.GPUS_SOON || []).length) {
+      const og = document.createElement("optgroup");
+      og.label = "Coming soon";
+      const o = new Option("AMD, Intel and older NVIDIA cards", "");
+      o.disabled = true;
+      og.append(o);
+      sel.append(og);
+    }
   };
 
   // ---------- Waitlist ----------

@@ -107,7 +107,11 @@
             </details>
             <details>
               <summary>What do I need?</summary>
-              <div class="a"><p>To hold: a Solana wallet such as Phantom or Solflare. To mine as well: any Windows PC with an NVIDIA, AMD or Intel Arc graphics card (a gaming PC, a gaming laptop, an AI rig, or an editing or render workstation). You give the app your <b>public</b> wallet address and nothing else.</p></div>
+              <div class="a"><p>To hold: a Solana wallet such as Phantom or Solflare. To mine as well: a Windows PC with an NVIDIA graphics card (a gaming PC, a gaming laptop, an AI rig, or an editing or render workstation). AMD and Intel Arc cards are coming after launch. You give the app your <b>public</b> wallet address and nothing else.</p></div>
+            </details>
+            <details>
+              <summary>Which wallet address do I paste?</summary>
+              <div class="a"><p>The Solana address of the wallet you hold $HASH in: the same one you buy with. Bought on Fomo, GMGN or another app? Use that app's wallet address. Your payouts go there, and your level is counted from the $HASH in it, so a different wallet won't count your bag.</p><p>Never paste an exchange deposit address (Coinbase, Binance and the like): your bag can't be counted there. And only ever your public address: nobody from Hashcoin will ask for your seed phrase or private key.</p></div>
             </details>
             <details>
               <summary>How do I start?</summary>
@@ -127,7 +131,7 @@
             </details>
             <details data-mode="live">
               <summary>When did it launch?</summary>
-              <div class="a"><p>On <span data-launch-date>launch day</span>, on a Meteora bonding curve. When the curve fills, it moves to a Meteora DAMM v2 pool (graduation) and the tax formula starts. Until then the tax is 5%.</p></div>
+              <div class="a"><p>On <span data-launch-date>launch day</span>, on a Meteora bonding curve. When the curve fills, it moves to a Meteora DAMM v2 pool (graduation) and the tax formula starts. Until then the tax is 2%.</p></div>
             </details>
           </div>
         </section>
@@ -137,7 +141,7 @@
           <div class="faq">
             <details>
               <summary>Which coin does my GPU mine?</summary>
-              <div class="a"><p>Whichever pays your card the most. The server scores each coin by the revenue you can actually sell, after slippage and confirmation delays, and assigns a coin per card. Today newer NVIDIA cards mostly favor PRL, older NVIDIA cards QUAN, and most AMD and Intel cards QTC. The final list depends on miner and pool checks before launch.</p></div>
+              <div class="a"><p>At launch, every NVIDIA card mines Pearl (PRL). As more coins and miners are switched on (for AMD, Intel and older NVIDIA cards), the server will assign each card whichever coin pays it the most, scored by the revenue you can actually sell after slippage and confirmation delays.</p></div>
             </details>
             <details>
               <summary>How often does it switch coins?</summary>
@@ -145,7 +149,7 @@
             </details>
             <details>
               <summary>Where do the revenue numbers come from?</summary>
-              <div class="a"><p>The calculator uses hashrate.no's 24-hour revenue for each card on its best coin, fetched October 14, 2026. These change daily with coin prices and network difficulty, and they're before electricity.</p></div>
+              <div class="a"><p>The calculator uses hashrate.no's 24-hour Pearl (PRL) revenue for each card, fetched October 14, 2026. Two cards it has no Pearl figure for (RTX 4080 Super and RTX 3080 12GB) are estimated from their closest sibling and marked "est.". These change daily with coin prices and network difficulty, and they're before electricity.</p></div>
             </details>
             <details>
               <summary>Will mining slow down my PC?</summary>
@@ -153,7 +157,7 @@
             </details>
             <details>
               <summary>Does it work on laptops?</summary>
-              <div class="a"><p>Yes. The calculator lists 45 laptop GPUs. hashrate.no measures only three of them (RTX 3060, 3070 and 3070 Ti Laptop); the others are estimated from the desktop card with the same chip and marked "est.". Laptops run hotter, so keep yours on a hard surface with the vents clear.</p></div>
+              <div class="a"><p>Yes. The calculator lists 23 NVIDIA laptop GPUs. hashrate.no measures only three of them (RTX 3060, 3070 and 3070 Ti Laptop); the others are estimated from the desktop card with the same chip and marked "est.". Laptops run hotter, so keep yours on a hard surface with the vents clear.</p></div>
             </details>
             <details>
               <summary>Does mining hurt my GPU?</summary>
@@ -246,7 +250,7 @@
                 <tr><td>Supply</td><td>21,000,000 $HASH, all created at launch; minting is then switched off for good</td></tr>
                 <tr><td>Chain</td><td>Solana, Token-2022 with the transfer-fee extension</td></tr>
                 <tr><td>Tax</td><td>2–5% on every transfer, set by a public formula: 5–10% of it to development, 45–75% to miners (what reaches 5× their mining), the rest to holders (at least 1% of every trade). No burn</td></tr>
-                <tr><td>Tax authority</td><td>Nobody can change it on the launch curve, where it's fixed at 5%. After graduation, a 2-of-3 multisig. The rate only moves within 2–5% by the published formula, and every change shows on-chain about 4 days before it applies</td></tr>
+                <tr><td>Tax authority</td><td>Nobody can change it on the launch curve, where it's fixed at 2%. After graduation, a 2-of-3 multisig. The rate only moves within 2–5% by the published formula, and every change shows on-chain about 4 days before it applies</td></tr>
                 <tr><td>Dev holding</td><td>3% of supply, bought openly at launch into one public wallet. Not locked. Gets no miner or holder payouts</td></tr>
                 <tr><td>Contract address</td><td><span data-mode="prelaunch">Published on this site first, at launch</span><span data-mode="live"><code class="sha" data-ca-text></code></span></td></tr>
               </tbody>

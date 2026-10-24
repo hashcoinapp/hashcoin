@@ -1,0 +1,11 @@
+{
+  "version": "0.1.6",
+  "notes": "Hashcoin Miner 0.1.6",
+  "pub_date": "2026-10-24T13:38:36.736Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRTFo2aHM0a3ZLdXkyMjNhbFlTdU8vd2RPczdJcHhpY0l1NVQrTUk3dGR5ZEl4d1pGekx3MFRHbGhXa2g3VTFNekJhS2EvSEt5c011YXFORk0rUnlpMW0rTVdobjFiWmdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyODQ5MTE0CWZpbGU6SGFzaGNvaW4gTWluZXJfMC4xLjZfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuMS42CjZVblpTRlZqM05HS2Q1MytrQXhsUjU4UzlIWEF0L1Y5TlhjdVFkOVNYNFBleGR2RjFSZVErNFQ5V0JzdVFIVHJRMFhPNkhGalRwTUlRbEZzaHZrckF3PT0K",
+      "url": "https://github.com/hashcoinapp/hashcoin/releases/download/desktop-v0.1.6/HashcoinMiner-0.1.6-setup.exe"
+    }
+  }
+}

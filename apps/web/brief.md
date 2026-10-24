@@ -35,7 +35,7 @@ $HASH is a Solana token with buying built in. Gaming PCs and other GPUs run the 
 - **It adjusts to the market.** A public formula sets the rate between 2% and 5%: quiet trading raises it so miners keep being paid, busy trading lowers it and holders take a bigger cut. Every change shows on-chain about 4 days before it applies.
 - **Built for holders.** Your level comes from your bag, and selling counts 3× against it, so the people who hold keep their share and quick flippers lose theirs.
 - **Fair launch.** 21,000,000 supply, minting switched off for good, no presale, no team or marketing allocation. The dev bag is 3%, bought in public as the first trade, and gets no payouts.
-- **Protected launch.** The launch curve's trading fee starts at 20% and falls to 1% over the first 5 minutes, so sniper bots can't take the launch cheaply.
+- **Low fees from the first second.** A flat 1% trading fee on the launch curve plus the 2% tax, with no high opening fee.
 - **Everything on-chain.** Every payout is a Solana transaction, listed on the website with Solscan links.
 
 ## How it works
@@ -56,7 +56,7 @@ $HASH is a Solana token with buying built in. Gaming PCs and other GPUs run the 
   - Miners with a bag: 45–75%, what lifts their average to 5×.
   - Holders: the rest, never less than 20% of the tax or 1% of volume.
 - **Per $100,000 traded:** $2,000–5,000 of tax; up to $3,750 to miners; at least $1,000 to holders; $200–250 to development.
-- **On the launch curve the rate is fixed at 5%.** The formula starts once the token graduates to its permanent pool.
+- **On the launch curve the rate is fixed at 2%.** The formula starts once the token graduates to its permanent pool.
 - **No burn.** Everything is paid out.
 
 ## Levels
@@ -92,7 +92,7 @@ What anyone earns depends on trading volume and how many GPUs are mining. <!-- p
 - **Chain:** Solana, Token-2022 with the transfer-fee extension. 6 decimals.
 - **Dev holding:** 3% of supply, bought openly at launch as the first trade, into one public wallet. It gets no miner or holder payouts.
 - **No presale, no team or marketing allocation.**
-- **Tax authority:** nobody can change the rate while the token is on its launch curve (Meteora's program holds it, at 5%). From graduation, a 2-of-3 multisig holds it and sets the rate the published formula gives.
+- **Tax authority:** nobody can change the rate while the token is on its launch curve (Meteora's program holds it, at 2%). From graduation, a 2-of-3 multisig holds it and sets the rate the published formula gives.
 <!-- prelaunch -->
 - **Every wallet the project controls** is listed on the website from launch.
 <!-- /prelaunch -->
@@ -105,7 +105,7 @@ What anyone earns depends on trading volume and how many GPUs are mining. <!-- p
 
 - **When:** Saturday, October 24, 2026, 1 pm ET (17:00 UTC).
 - **Where:** a Meteora bonding curve on Solana. When the curve fills, it migrates automatically to a permanent Meteora DAMM v2 pool. Jupiter and any Solana wallet can trade it.
-- **Fees:** the curve's trading fee is 20% at the start, falling to 1% over the first 5 minutes (to stop sniper bots), plus the 5% tax. After graduation, the pool fee is 0.25% plus the 2–5% tax. The platform's share of these fees funds mining payouts and running costs.
+- **Fees:** the curve's trading fee is a flat 1%, plus the 2% tax. After graduation, the pool fee is 0.25% plus the 2–5% tax. The platform's share of these fees funds mining payouts and running costs.
 - **Contract address:** <!-- live -->{{ca}}, <!-- /live -->published on https://hashcoin.app first. The header's "CA" button copies it.
 - **Other tokens use the HASH ticker**, on Solana and other chains. Only the contract address on https://hashcoin.app is Hashcoin's.
 
@@ -114,7 +114,8 @@ What anyone earns depends on trading volume and how many GPUs are mining. <!-- p
 <!-- prelaunch -->
 - **Download:** opens at launch, from the website.
 <!-- /prelaunch -->
-- Windows, with an NVIDIA, AMD or Intel Arc GPU: gaming PCs, gaming laptops, AI rigs, editing and render workstations.
+- Windows, with an NVIDIA GPU at launch (AMD and Intel Arc are coming): gaming PCs, gaming laptops, AI rigs, editing and render workstations.
+- Paste the address of the wallet you hold $HASH in (the one you buy with, e.g. your Fomo or GMGN wallet). Never an exchange deposit address.
 - Mines only on GPU power that isn't in use; when a game or render needs the GPU, mining steps back. It pauses a card at 83 °C by default.
 - Runs only official miner releases checked against a signed list, and coin assignments are signed, so a hijacked connection can't redirect mining.
 - Needs only a public wallet address. Tray icon, stops when asked, uninstalls cleanly.

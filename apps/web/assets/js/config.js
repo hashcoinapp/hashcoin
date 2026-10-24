@@ -30,8 +30,7 @@ window.HASHCOIN = Object.assign({
   // Social links. null shows "coming soon".
   x: "https://x.com/HashcoinSOL",
   discord: "https://discord.gg/XVYCbKD7mA",
-  // The public code repo github.com/hashcoinapp/hashcoin is private until launch (user, Oct 19);
-  // launch day: make it public, then set this to "https://github.com/hashcoinapp/hashcoin".
-  github: null,
+  // The public code repo (public since launch day, Oct 24).
+  github: "https://github.com/hashcoinapp/hashcoin",
 }, window.HASHCOIN || {});
 document.documentElement.dataset.mode = window.HASHCOIN.mode === "live" ? "live" : "prelaunch";

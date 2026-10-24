@@ -138,7 +138,7 @@ async function main() {
   console.log(`Launching $HASH on ${cluster}${dryRun ? " (DRY RUN: nothing is sent)" : ""}`);
   console.log(`  graduation target ${graduationSol} SOL, ${LAUNCH.percentToPool}% of supply to the pool`);
   console.log(`  start market cap ${s.startMarketCapSol.toFixed(1)} SOL, at graduation ${s.graduationMarketCapSol.toFixed(1)} SOL (price x${s.priceRiseOverCurve.toFixed(1)} over the curve)`);
-  console.log(`  tax ${LAUNCH.taxBps / 100}% (fixed on the curve); curve fee ${LAUNCH.curveFee.startBps / 100}% → ${LAUNCH.curveFee.endBps / 100}% over ${LAUNCH.curveFee.seconds / 60} min (we keep ${s.curveFeeToUsPercent}% after Meteora's cut); pool fee after graduation ${LAUNCH.poolFeeBps / 100}%`);
+  console.log(`  tax ${LAUNCH.taxBps / 100}% (fixed on the curve); curve fee ${LAUNCH.curveFee.startBps === LAUNCH.curveFee.endBps ? `${LAUNCH.curveFee.startBps / 100}% flat` : `${LAUNCH.curveFee.startBps / 100}% → ${LAUNCH.curveFee.endBps / 100}% over ${LAUNCH.curveFee.seconds / 60} min`} (we keep ${s.curveFeeToUsPercent}% after Meteora's cut); pool fee after graduation ${LAUNCH.poolFeeBps / 100}%`);
   console.log(`  dev buy: ${s.devBuy.tokensKept.toLocaleString("en-US")} $HASH kept (${s.devBuy.tokensBought.toFixed(0)} bought before the tax) for ~${s.devBuy.sol.toFixed(4)} SOL`);
   console.log(`  launcher ${launcher.publicKey.toBase58()} (${await sol(launcher.publicKey)} SOL)`);
   console.log(`  dev      ${dev.publicKey.toBase58()} (${await sol(dev.publicKey)} SOL)`);

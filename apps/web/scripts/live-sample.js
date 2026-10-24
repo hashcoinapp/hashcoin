@@ -10,20 +10,19 @@
     launchAt: "2026-10-24T16:00:00Z",
     ca: "SAMPLEcaNotReaLDoNotBuyHASH11111111111111",
     download: {
-      url: "https://github.com/hashcoinapp/hashcoin/releases/download/desktop-v0.1.3/HashcoinMiner-0.1.3-setup.exe",
-      version: "0.1.3",
-      sha256: "5a3f0c1e9b7d2a4c6e8f0a1b3c5d7e9f1a2b4c6d8e0f2a4b6c8d0e2f4a6b8c0d",
+      url: "https://github.com/hashcoinapp/hashcoin/releases/download/desktop-v0.1.6/HashcoinMiner-0.1.6-setup.exe",
+      version: "0.1.6",
+      sha256: "978e56572a00028cfadd8e6f60ef12c3a09ecdd2fcbfa5f236fc111985bf739d",
     },
     wallets: [
-      { label: "Payout wallet", note: "Collects the tax, pays miners and holders", address: "SAMPLEpayoutWa11etNotReaL1111111111111111" },
-      { label: "Dev wallet", note: "The 3% dev bag. Gets no payouts", address: "SAMPLEdevWa11etNotReaL111111111111111111" },
-      { label: "Multisig, 2-of-3", note: "Holds the tax rate from graduation", address: "SAMPLEmu1tisigNotReaL1111111111111111111" },
-      { label: "Launch wallet", note: "Created the token", address: "SAMPLE1aunchWa11etNotReaL111111111111111" },
+      { label: "Payout wallet", note: "Collects the tax, pays miners and holders", address: "HQjTugq2JFEoPTdTQVbXtkCqjHhJjgD9zeqxrzYLhFPZ" },
+      { label: "Dev wallet", note: "The 3% dev bag. Gets no payouts", address: "BHSuxR6TJyXJS5Rp4gif1LupP8nGDP36C7uSqQYcHhNv" },
+      { label: "Launch wallet", note: "Created the token", address: "31HcxXFek12KVTz5EZJ1tzTxSy1Vo2591J2mSs16S2L8" },
     ],
   });
   document.documentElement.dataset.mode = "live";
   // A launch day at the estimate's own ratio: $504K market cap, $150K traded, 200 GPUs mining
-  // ($750 a GPU), on the curve's fixed 5% tax: dev 5%, miners 45% (the floor; their bag miners average
+  // ($750 a GPU), on the curve's fixed tax (5% in this sample; 2% at launch): dev 5%, miners 45% (the floor; their bag miners average
   // about 7×), holders 50%. Rounds every 10 minutes, holders paid hourly.
   const PRICE = 0.024;
   const round = (i, holders) => ({

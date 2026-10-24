@@ -15,7 +15,7 @@ describe("launch settings", () => {
 
   it("keep the tax, fees and supply as decided", () => {
     const c = launchCurve(50);
-    expect(TRANSFER_FEE_PARAMETERS.transferFeeBasisPoints).toBe(500);
+    expect(TRANSFER_FEE_PARAMETERS.transferFeeBasisPoints).toBe(200);
     expect(c.tokenSupply?.preMigrationTokenSupply.toString()).toBe(String(LAUNCH.supply * 10 ** LAUNCH.decimals));
     expect(c.tokenSupply?.postMigrationTokenSupply.toString()).toBe(c.tokenSupply?.preMigrationTokenSupply.toString());
     expect(c.migratedPoolFee.poolFeeBps).toBe(25);
@@ -23,12 +23,12 @@ describe("launch settings", () => {
     expect(c.partnerPermanentLockedLiquidityPercentage).toBe(100);
   });
 
-  it("price our 3% dev bag after the 5% tax", () => {
+  it("price our 3% dev bag after the 2% tax", () => {
     const s = launchSummary(50);
     expect(s.devBuy.tokensKept).toBe(630_000);
-    expect(s.devBuy.tokensBought).toBeCloseTo(630_000 / 0.95, 0);
-    expect(s.devBuy.sol).toBeGreaterThan(0.7);
-    expect(s.devBuy.sol).toBeLessThan(0.75);
+    expect(s.devBuy.tokensBought).toBeCloseTo(630_000 / 0.98, 0);
+    expect(s.devBuy.sol).toBeGreaterThan(0.65);
+    expect(s.devBuy.sol).toBeLessThan(0.72);
   });
 
   it("refuse a non-positive target", () => {

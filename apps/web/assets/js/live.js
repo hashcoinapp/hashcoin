@@ -62,7 +62,7 @@
     set("rate", rate.bps != null ? pct(rate.bps) + (rate.scheduled ? `, going to ${pct(rate.scheduled.bps)}` : "") : "—");
     const m = st.market || {};
     set("pool", m.phase === "damm" ? "Trading on a Meteora DAMM v2 pool." : m.phase === "curve" || m.phase === "graduating"
-      ? `On the Meteora bonding curve${m.curveProgress != null ? `, ${Math.round(100 * m.curveProgress)}% of the way to graduation` : ""}. The tax is 5% until it graduates.` : "—");
+      ? `On the Meteora bonding curve${m.curveProgress != null ? `, ${Math.round(100 * m.curveProgress)}% of the way to graduation` : ""}. The tax is ${rate.bps != null ? pct(rate.bps) : "2%"} until it graduates.` : "—");
 
     // What each level was paid in the last 24 hours, on the level cards (once the API publishes it).
     const lv = st.levels24h;
