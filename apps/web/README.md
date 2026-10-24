@@ -45,7 +45,7 @@ Live mode changes:
 ```sh
 node apps/web/scripts/go_live.mjs --ca <mint> \
   --wallet "Payout wallet=<address>=Collects the tax, pays miners and holders" \
-  --wallet "Dev wallet=<address>=The 1% dev bag. Gets no payouts" \
+  --wallet "Dev wallet=<address>=The 3% dev bag. Gets no payouts" \
   --wallet "Launch wallet=<address>"
   # add --download-url <installer .exe> --download-version 0.1.3 --sha256 <64 hex> if download isn't set yet
 node apps/web/scripts/build_pages.mjs && python3 apps/web/scripts/build_standalone.py

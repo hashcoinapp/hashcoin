@@ -23,12 +23,12 @@ describe("launch settings", () => {
     expect(c.partnerPermanentLockedLiquidityPercentage).toBe(100);
   });
 
-  it("price our 1% dev bag after the 5% tax", () => {
+  it("price our 3% dev bag after the 5% tax", () => {
     const s = launchSummary(50);
-    expect(s.devBuy.tokensKept).toBe(210_000);
-    expect(s.devBuy.tokensBought).toBeCloseTo(210_000 / 0.95, 0);
-    expect(s.devBuy.sol).toBeGreaterThan(0.2);
-    expect(s.devBuy.sol).toBeLessThan(0.3);
+    expect(s.devBuy.tokensKept).toBe(630_000);
+    expect(s.devBuy.tokensBought).toBeCloseTo(630_000 / 0.95, 0);
+    expect(s.devBuy.sol).toBeGreaterThan(0.7);
+    expect(s.devBuy.sol).toBeLessThan(0.75);
   });
 
   it("refuse a non-positive target", () => {

@@ -16,7 +16,7 @@
     },
     wallets: [
       { label: "Payout wallet", note: "Collects the tax, pays miners and holders", address: "SAMPLEpayoutWa11etNotReaL1111111111111111" },
-      { label: "Dev wallet", note: "The 1% dev bag. Gets no payouts", address: "SAMPLEdevWa11etNotReaL111111111111111111" },
+      { label: "Dev wallet", note: "The 3% dev bag. Gets no payouts", address: "SAMPLEdevWa11etNotReaL111111111111111111" },
       { label: "Multisig, 2-of-3", note: "Holds the tax rate from graduation", address: "SAMPLEmu1tisigNotReaL1111111111111111111" },
       { label: "Launch wallet", note: "Created the token", address: "SAMPLE1aunchWa11etNotReaL111111111111111" },
     ],

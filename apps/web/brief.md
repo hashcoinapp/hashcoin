@@ -34,7 +34,7 @@ $HASH is a Solana token with buying built in. Gaming PCs and other GPUs run the 
 - **A tax that can't be dodged.** The tax is enforced by Solana's Token-2022 program on every transfer, in every pool, aggregator and wallet. Earlier tax-sharing tokens failed when traders simply bought somewhere else; that can't happen here.
 - **It adjusts to the market.** A public formula sets the rate between 2% and 5%: quiet trading raises it so miners keep being paid, busy trading lowers it and holders take a bigger cut. Every change shows on-chain about 4 days before it applies.
 - **Built for holders.** Your level comes from your bag, and selling counts 3× against it, so the people who hold keep their share and quick flippers lose theirs.
-- **Fair launch.** 21,000,000 supply, minting switched off for good, no presale, no team or marketing allocation. The dev bag is 1%, bought in public as the first trade, and gets no payouts.
+- **Fair launch.** 21,000,000 supply, minting switched off for good, no presale, no team or marketing allocation. The dev bag is 3%, bought in public as the first trade, and gets no payouts.
 - **Protected launch.** The launch curve's trading fee starts at 20% and falls to 1% over the first 5 minutes, so sniper bots can't take the launch cheaply.
 - **Everything on-chain.** Every payout is a Solana transaction, listed on the website with Solscan links.
 
@@ -90,7 +90,7 @@ What anyone earns depends on trading volume and how many GPUs are mining. <!-- p
 
 - **Supply:** 21,000,000 $HASH, all created at launch. Minting and freezing are switched off for good.
 - **Chain:** Solana, Token-2022 with the transfer-fee extension. 6 decimals.
-- **Dev holding:** 1% of supply, bought openly at launch as the first trade, into one public wallet. It gets no miner or holder payouts.
+- **Dev holding:** 3% of supply, bought openly at launch as the first trade, into one public wallet. It gets no miner or holder payouts.
 - **No presale, no team or marketing allocation.**
 - **Tax authority:** nobody can change the rate while the token is on its launch curve (Meteora's program holds it, at 5%). From graduation, a 2-of-3 multisig holds it and sets the rate the published formula gives.
 <!-- prelaunch -->

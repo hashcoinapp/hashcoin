@@ -2,7 +2,7 @@
 //   1. the config (create_config2): 21M Token-2022 supply, 5% tax collected by the partner, the rate
 //      authority handed to the partner at graduation, 25% of supply to the DAMM v2 pool, curve fee 20% → 1%
 //      over 5 minutes, 0.25% pool fee after graduation
-//   2. the pool and our 1% dev buy in one transaction (the dev buy pays the 1% floor, not the sniper fee)
+//   2. the pool and our 3% dev buy in one transaction (the dev buy pays the 1% floor, not the sniper fee)
 //   3. checks: mint and freeze authority none, 5% tax live, dev bag in the dev wallet
 // The graduation target is the one number left; the user picks it 24–48 h before launch.
 //
@@ -13,7 +13,7 @@
 //
 //   --cluster devnet|mainnet   --rpc <url> (or SOLANA_RPC; use a paid RPC on mainnet)
 //   --launcher <keypair file>  pays rent and creates the pool (signs)
-//   --dev <keypair file>       the public dev wallet that buys the 1% bag (signs)
+//   --dev <keypair file>       the public dev wallet that buys the 3% bag (signs)
 //   --partner <pubkey>         fee claimer = tax withdraw authority = rate authority after graduation
 //                              (devnet: defaults to the launcher)
 //   --dry-run                  build and simulate, send nothing

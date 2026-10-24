@@ -11,7 +11,7 @@
 //        [--dry-run]                             print the result, write nothing
 //   node apps/web/scripts/go_live.mjs --prelaunch  back to pre-launch mode (keeps the values)
 //
-// A wallet can carry a short note: --wallet "Dev wallet=<address>=The 1% dev bag. Gets no payouts".
+// A wallet can carry a short note: --wallet "Dev wallet=<address>=The 3% dev bag. Gets no payouts".
 import { readFileSync, writeFileSync } from "node:fs";
 import { CONFIG, SAMPLE_CA, checkConfig, isSolanaAddress, linksFor, loadConfig } from "./site_config.mjs";
 

@@ -21,8 +21,8 @@ export const LAUNCH = {
   curveFee: { startBps: 2000, endBps: 100, periods: 60, seconds: 300 },
   /** DAMM v2 pool fee after graduation, paid to us in SOL (compoundingFeeBps 0). */
   poolFeeBps: 25,
-  /** Our 1% dev bag, bought openly as the first swap (net of the tax). */
-  devBuyTokens: 210_000,
+  /** Our 3% dev bag, bought openly as the first swap (net of the tax). Was 1% until Oct 24 (user). */
+  devBuyTokens: 630_000,
   /** Graduation targets allowed on mainnet, in SOL (the plan is 40–85, picked from the X campaign). */
   mainnetGraduationSol: { min: 20, max: 200 },
 } as const;
